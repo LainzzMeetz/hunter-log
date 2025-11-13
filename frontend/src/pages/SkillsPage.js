@@ -9,16 +9,20 @@ const clickSound = new Audio('/audio/click.mp3');
 
 const treeStyles = {
   layout: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr 1fr 1fr',
-    gap: '20px',
-    width: '90vw',
-    maxWidth: '1400px',
+    display: 'flex', // Change from grid to flex for better mobile wrapping
+    flexWrap: 'wrap', // CRITICAL FIX: Allows items to wrap
+    justifyContent: 'center',
+    gap: '15px', // Reduce gap on mobile
+    width: '95vw', // Use viewport width
+    maxWidth: '1400px', 
   },
   treeColumn: {
     padding: '10px',
     border: `1px solid ${styles.title.color}33`,
     borderRadius: '8px',
+    flex: '1 1 200px', // Allow columns to grow (1), shrink (1), and have a base width of 200px
+    minWidth: '220px', // Minimum width for each column before wrapping
+    maxWidth: '300px', // Maximum width for each column
   },
   treeTitle: {
     ...styles.subtitle,
@@ -38,11 +42,6 @@ const treeStyles = {
     color: '#000',
     textShadow: 'none',
   },
-  inputGroup: {
-    padding: '15px 0',
-    borderBottom: `1px solid ${styles.title.color}33`,
-    marginBottom: '20px',
-  },
   input: {
     ...styles.input,
     width: 'calc(100% - 22px)',
@@ -61,22 +60,23 @@ function SkillsPage({ player: playerProp, setPlayer }) {
   const [allSkills, setAllSkills] = useState([]);
   const [localPlayer, setLocalPlayer] = useState(playerProp);
   const [newSkillName, setNewSkillName] = useState('');
-  const [newSkillTree, setNewSkillTree] = useState('embedded'); // Default to embedded
+  const [newSkillTree, setNewSkillTree] = useState('embedded');
   const [newSkillDesc, setNewSkillDesc] = useState('');
 
   // Fetch Logic
   const fetchSkills = () => {
-    axios.get('https://hunter-log.onrender.com/api/skills')
+    axios.get('http://hunter-log.onrender.com/api/skills') // Note: We use the Render URL here
       .then(res => setAllSkills(res.data))
       .catch(err => console.error("Error fetching skills:", err));
   };
 
   useEffect(() => {
-    // Sync player state and fetch skills
     if (!localPlayer || playerProp !== localPlayer) {
-      axios.get('https://hunter-log.onrender.com/api/player')
+      axios.get('http://hunter-log.onrender.com/api/player') // Note: We use the Render URL here
         .then(res => setLocalPlayer(res.data))
         .catch(err => console.error("Error fetching player data:", err));
+    } else if (playerProp && localPlayer !== playerProp) {
+        setLocalPlayer(playerProp);
     }
     fetchSkills();
   }, [playerProp]);
@@ -88,28 +88,27 @@ function SkillsPage({ player: playerProp, setPlayer }) {
     clickSound.play();
     
     try {
-      await axios.post('https://hunter-log.onrender.com/api/skills', {
+      await axios.post('http://hunter-log.onrender.com/api/skills', { // Note: We use the Render URL here
         name: newSkillName,
-        tree: newSkillTree, // Pass the tree
+        tree: newSkillTree, 
         description: newSkillDesc,
       });
       setNewSkillName('');
       setNewSkillDesc('');
-      fetchSkills(); // Refresh the display
+      fetchSkills(); 
     } catch (error) {
       console.error("Error adding skill:", error);
     }
   };
 
-
   // Set Active Track Logic (Unchanged)
   const handleSetTrack = async (trackName) => {
     clickSound.play();
     try {
-      const res = await axios.put('https://hunter-log.onrender.com/api/player/set-track', {
+      const res = await axios.put('http://hunter-log.onrender.com/api/player/set-track', { // Note: We use the Render URL here
         track: trackName
       });
-      setLocalPlayer(res.data);
+      setLocalPlayer(res.data); 
       setPlayer(res.data); 
     } catch (error) {
       console.error("Error setting active track:", error);
@@ -118,7 +117,6 @@ function SkillsPage({ player: playerProp, setPlayer }) {
 
   if (!localPlayer) return <div>Loading player data...</div>;
 
-  // Filter logic remains the same
   const filterSkills = (db_key) => allSkills.filter(s => s.tree === db_key);
 
   return (
@@ -128,8 +126,8 @@ function SkillsPage({ player: playerProp, setPlayer }) {
       {/* --- SKILL ADDITION FORM --- */}
       <div style={treeStyles.inputGroup}>
         <h3 style={styles.subtitle}>Log New Skill</h3>
-        <form onSubmit={handleAddSkill} style={{ display: 'flex', gap: '15px', alignItems: 'flex-end' }}>
-          <div style={{ flex: 2 }}>
+        <form onSubmit={handleAddSkill} style={{ display: 'flex', gap: '15px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 200px' }}>
             <label style={styles.statLabel}>Skill Name</label>
             <input 
               style={treeStyles.input}
@@ -139,7 +137,7 @@ function SkillsPage({ player: playerProp, setPlayer }) {
               placeholder="e.g., 'TensorFlow Lite for MCUs'"
             />
           </div>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: '1 1 150px' }}>
             <label style={styles.statLabel}>Skill Tree</label>
             <select style={treeStyles.input} value={newSkillTree} onChange={(e) => setNewSkillTree(e.target.value)}>
               <option value="embedded">Embedded</option>
