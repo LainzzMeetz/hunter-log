@@ -6,19 +6,23 @@ import { styles } from './styles';
 
 const gridStyles = {
   container: {
-    width: '600px', // Back to a compact width
+    width: '95%', // CRITICAL FIX: Use percentage width
+    maxWidth: '850px', 
   },
   statGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr 1fr', // --- 3 equal columns (the fix) ---
+    display: 'flex', // FIX: Change to flex
+    flexWrap: 'wrap', // FIX: Allow wrapping
+    justifyContent: 'space-between',
     gap: '20px',
   },
-  statBlock: {},
+  statBlock: {
+    flex: '1 1 200px', // FIX: Allow blocks to shrink/grow, base width 200px
+    minWidth: '200px',
+  },
 };
 
-function PlayerStats({ player }) { // No setPlayer needed here
+function PlayerStats({ player }) {
   if (!player) {
-    // We expect App.js to handle the initial loading state.
     return (
       <SystemWindow>
         <h2 style={styles.title}>[ Player Stats ]</h2>
@@ -73,7 +77,6 @@ function PlayerStats({ player }) { // No setPlayer needed here
             <div style={styles.statRow}><span style={styles.statLabel}>Embedded</span><span style={styles.statValue}>{player.stats.embedded_skill}</span></div>
             <div style={styles.statRow}><span style={styles.statLabel}>AI/ML</span><span style={styles.statValue}>{player.stats.ai_ml_skill}</span></div>
             <div style={styles.statRow}><span style={styles.statLabel}>Software Dev</span><span style={styles.statValue}>{player.stats.software_dev_skill}</span></div>
-            {/* --- FIX: Quantum is now a row here --- */}
             <div style={styles.statRow}><span style={styles.statLabel}>Quantum</span><span style={styles.statValue}>{player.stats.quantum_computing}</span></div>
           </div>
           
