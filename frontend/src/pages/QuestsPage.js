@@ -7,22 +7,22 @@ const styles = {
   layout: {
     display: 'flex',
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexWrap: 'wrap', // CRITICAL FIX: Allows columns to wrap/stack
     justifyContent: 'center',
     gap: '20px',
-    width: '90vw',
+    width: '95vw', // Use viewport width instead of fixed pixels
     maxWidth: '1000px',
   },
   column: {
     flex: '1',
-    minWidth: '450px',
+    minWidth: '300px', // Allow the column to shrink down to 300px
+    maxWidth: '480px', // Stop it from getting too wide on a large screen
     display: 'flex',
     flexDirection: 'column',
     gap: '20px',
   }
 };
 
-// --- FIX: Now passes setPlayer down to MainQuests ---
 function QuestsPage({ player, setPlayer }) { 
   return (
     <div style={styles.layout}>
@@ -32,7 +32,6 @@ function QuestsPage({ player, setPlayer }) {
       </div>
       
       <div style={styles.column}>
-        {/* Pass setPlayer down for achievement reward */}
         <MainQuests setPlayer={setPlayer} />
       </div>
 
