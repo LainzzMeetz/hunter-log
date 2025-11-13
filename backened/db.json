@@ -1,0 +1,60 @@
+{
+  "player": {
+    "level": 1,
+    "exp": 45,
+    "exp_to_next_level": 100,
+    "stats": {
+      "body": 1,
+      "mind": 1,
+      "career": 1
+    }
+  },
+  "daily_quests": [
+    {
+      "id": 1,
+      "title": "Go for a 10-minute walk (Body)",
+      "exp_grant": 10,
+      "completed": true
+    },
+    {
+      "id": 2,
+      "title": "Read one tech article (Mind)",
+      "exp_grant": 10,
+      "completed": true
+    },
+    {
+      "id": 3,
+      "title": "Apply for one job (Career)",
+      "exp_grant": 25,
+      "completed": true
+    }
+  ],
+  "main_quests": [
+    {
+      "id": 1,
+      "title": "Reawakening",
+      "description": "Secure a new 'Guild' (Job) and begin your new journey.",
+      "completed": false
+    },
+    {
+      "id": 2,
+      "title": "New Armory",
+      "description": "Deploy this 'System' to a public URL to access it anywhere.",
+      "completed": false
+    }
+  ],
+  "skills": [
+    {
+      "id": 1,
+      "name": "FastAPI: Core"
+    },
+    {
+      "id": 2,
+      "name": "React: Core"
+    },
+    {
+      "id": 3,
+      "name": "System UI: v1.0"
+    }
+  ]
+}
