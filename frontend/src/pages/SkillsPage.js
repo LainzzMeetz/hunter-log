@@ -9,20 +9,20 @@ const clickSound = new Audio('/audio/click.mp3');
 
 const treeStyles = {
   layout: {
-    display: 'flex', // Change from grid to flex for better mobile wrapping
-    flexWrap: 'wrap', // CRITICAL FIX: Allows items to wrap
+    display: 'flex',
+    flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: '15px', // Reduce gap on mobile
-    width: '95vw', // Use viewport width
+    gap: '15px',
+    width: '95vw', // FIX: Use percentage width
     maxWidth: '1400px', 
   },
   treeColumn: {
     padding: '10px',
     border: `1px solid ${styles.title.color}33`,
     borderRadius: '8px',
-    flex: '1 1 200px', // Allow columns to grow (1), shrink (1), and have a base width of 200px
-    minWidth: '220px', // Minimum width for each column before wrapping
-    maxWidth: '300px', // Maximum width for each column
+    flex: '1 1 200px', 
+    minWidth: '200px', // FIX: Reduced min width to allow stacking
+    maxWidth: '300px', 
   },
   treeTitle: {
     ...styles.subtitle,
@@ -63,16 +63,16 @@ function SkillsPage({ player: playerProp, setPlayer }) {
   const [newSkillTree, setNewSkillTree] = useState('embedded');
   const [newSkillDesc, setNewSkillDesc] = useState('');
 
-  // Fetch Logic
+  // Fetch Logic (Unchanged)
   const fetchSkills = () => {
-    axios.get('http://hunter-log.onrender.com/api/skills') // Note: We use the Render URL here
+    axios.get('https://hunter-log.onrender.com/api/skills')
       .then(res => setAllSkills(res.data))
       .catch(err => console.error("Error fetching skills:", err));
   };
 
   useEffect(() => {
     if (!localPlayer || playerProp !== localPlayer) {
-      axios.get('http://hunter-log.onrender.com/api/player') // Note: We use the Render URL here
+      axios.get('https://hunter-log.onrender.com/api/player')
         .then(res => setLocalPlayer(res.data))
         .catch(err => console.error("Error fetching player data:", err));
     } else if (playerProp && localPlayer !== playerProp) {
@@ -81,14 +81,14 @@ function SkillsPage({ player: playerProp, setPlayer }) {
     fetchSkills();
   }, [playerProp]);
 
-  // Skill Adding Logic
+  // Skill Adding Logic (Unchanged)
   const handleAddSkill = async (e) => {
     e.preventDefault();
     if (!newSkillName.trim()) return;
     clickSound.play();
     
     try {
-      await axios.post('http://hunter-log.onrender.com/api/skills', { // Note: We use the Render URL here
+      await axios.post('https://hunter-log.onrender.com/api/skills', {
         name: newSkillName,
         tree: newSkillTree, 
         description: newSkillDesc,
@@ -105,11 +105,11 @@ function SkillsPage({ player: playerProp, setPlayer }) {
   const handleSetTrack = async (trackName) => {
     clickSound.play();
     try {
-      const res = await axios.put('http://hunter-log.onrender.com/api/player/set-track', { // Note: We use the Render URL here
+      const res = await axios.put('https://hunter-log.onrender.com/api/player/set-track', {
         track: trackName
       });
       setLocalPlayer(res.data); 
-      setPlayer(res.data); 
+      setPlayer(res.data);
     } catch (error) {
       console.error("Error setting active track:", error);
     }
