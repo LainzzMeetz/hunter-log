@@ -33,7 +33,7 @@ function DailyQuests({ player, setPlayer }) {
   const [quests, setQuests] = useState([]);
 
   const fetchQuests = () => {
-    axios.get('http://127.0.0.1:8000/api/quests?type=daily')
+    axios.get('https://hunter-log.onrender.com/api/quests?type=daily')
       .then(res => setQuests(res.data))
       .catch(err => console.error("Error fetching daily quests:", err));
   };
@@ -46,7 +46,7 @@ function DailyQuests({ player, setPlayer }) {
     playSound('/audio/click.mp3');
     try {
       const res = await axios.put(
-        `http://127.0.0.1:8000/api/quests/${questId}/subtask/${subTaskTitle}`
+        `https://hunter-log.onrender.com/api/quests/${questId}/subtask/${subTaskTitle}`
       );
       
       setQuests(prevQuests => 
@@ -65,7 +65,7 @@ function DailyQuests({ player, setPlayer }) {
   const handleCompleteQuest = async (questId) => {
     try {
       const res = await axios.put(
-        `http://127.0.0.1:8000/api/quests/${questId}/complete`
+        `https://hunter-log.onrender.com/api/quests/${questId}/complete`
       );
       setPlayer(res.data);
       fetchQuests();
