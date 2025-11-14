@@ -9,7 +9,8 @@ const clickSound = new Audio('/audio/click.mp3');
 
 const bossStyles = {
     container: {
-        width: '700px',
+        width: '95vw',
+        maxWidth: '700px',
     },
     bossItem: {
         ...styles.item,
@@ -135,5 +136,6 @@ function BossesPage() {
         </SystemWindow>
     );
 }
+
 
 export default BossesPage;
