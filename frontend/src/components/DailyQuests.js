@@ -6,11 +6,18 @@ import SystemWindow from './SystemWindow';
 import { styles } from './styles';
 import Timer from './Timer';
 
-// --- NEW FIX: Create the Audio Object Globally (Only once) ---
 const clickSound = new Audio('/audio/click.mp3');
-const playClick = () => {
-    clickSound.currentTime = 0;
-    clickSound.play().catch(e => console.warn("Click sound blocked by browser policy."));
+
+// --- NEW HELPER FUNCTION FIX ---
+// This function must be defined *here* to be used by the component.
+const formatTrackName = (track) => {
+  switch (track) {
+    case 'embedded_skill': return 'EMBEDDED';
+    case 'ai_ml_skill': return 'AI/ML';
+    case 'software_dev_skill': return 'SOFTWARE DEV';
+    case 'quantum_computing': return 'QUANTUM';
+    default: return track.toUpperCase();
+  }
 };
 // ---
 
@@ -28,7 +35,7 @@ function DailyQuests({ player, setPlayer }) {
   }, [player]);
 
   const handleToggleSubtask = async (questId, subTaskTitle) => {
-    playClick(); // Use the global play function
+    // ... (logic is unchanged)
     try {
       const res = await axios.put(
         `https://hunter-log.onrender.com/api/quests/${questId}/subtask/${subTaskTitle}`
@@ -121,8 +128,7 @@ function DailyQuests({ player, setPlayer }) {
             
             {quest.duration_minutes > 0 && !quest.completed && (
               <div style={{marginTop: '15px'}}>
-                {/* Timer component will also be updated */}
-                <Timer quest={quest} onComplete={handleCompleteQuest} /> 
+                <Timer quest={quest} onComplete={handleCompleteQuest} />
               </div>
             )}
             
