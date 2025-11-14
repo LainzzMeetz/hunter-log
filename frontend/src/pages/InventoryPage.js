@@ -52,7 +52,8 @@ function InventoryPage() {
     const filterItems = (type) => items.filter(item => item.type === type);
 
     const renderItemBlock = (title, type) => (
-        <div style={{marginBottom: '20px', width: '300px'}}>
+        // FIX 1: Removed fixed width to allow full vertical stack
+        <div style={{marginBottom: '20px', width: '100%'}}> 
             <h3 style={styles.subtitle}>{title}</h3>
             {filterItems(type).length === 0 ? (
                 <p style={styles.statLabel}>No {title} logged.</p>
@@ -70,10 +71,10 @@ function InventoryPage() {
         <SystemWindow>
             <h2 style={styles.title}>[ Inventory (Resources) ]</h2>
             
-            {/* --- ADD ITEM FORM --- */}
+            {/* --- ADD ITEM FORM (Fixed to full width) --- */}
             <form onSubmit={handleAddItem} style={{marginBottom: '30px', borderBottom: '1px solid #333', paddingBottom: '15px'}}>
                 <h3 style={styles.subtitle}>Acquire New Item/Tool</h3>
-                <div style={{display: 'flex', gap: '10px', marginBottom: '10px'}}>
+                <div style={{display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap'}}>
                     <input 
                         type="text"
                         style={{...inventoryStyles.input, flexGrow: 1}}
@@ -98,7 +99,8 @@ function InventoryPage() {
                 />
             </form>
 
-            <div style={{display: 'flex', gap: '30px', flexWrap: 'wrap'}}>
+            {/* FIX 2: Changed to flex-direction: column to stack the blocks */}
+            <div style={{display: 'flex', flexDirection: 'column', gap: '15px'}}> 
                 {renderItemBlock("Equipment", "equipment")}
                 {renderItemBlock("Special Items", "special")}
                 {renderItemBlock("Consumables", "consumable")}
