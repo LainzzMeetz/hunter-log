@@ -9,7 +9,8 @@ const clickSound = new Audio('/audio/click.mp3');
 
 const mapStyles = {
     container: {
-        width: '700px',
+        width: '95vw',
+        maxWidth: '700px',
     },
     chapterItem: {
         ...styles.item,
@@ -171,5 +172,6 @@ function MapPage() {
         </SystemWindow>
     );
 }
+
 
 export default MapPage;
