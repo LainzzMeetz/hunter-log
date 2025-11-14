@@ -1,9 +1,19 @@
 // frontend/src/components/Sidebar.js
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion'; // <-- FIX APPLIED HERE
+import { motion, AnimatePresence } from 'framer-motion';
 
 const SYSTEM_BLUE = '#00bfff';
 const SYSTEM_FONT = "'Share Tech Mono', monospace";
+
+// --- AUDIO LOGIC FIX ---
+// 1. Create the Audio Object Globally
+const clickSound = new Audio('/audio/click.mp3');
+// 2. Define the play function to avoid crashing (Browser Policy Fix)
+const playClick = () => {
+    clickSound.currentTime = 0;
+    clickSound.play().catch(e => console.warn("Click sound blocked by browser policy."));
+};
+// ---
 
 const sidebarStyles = {
     overlay: {
@@ -66,6 +76,7 @@ const sidebarStyles = {
 function Sidebar({ activeWindow, setActiveWindow, isMenuOpen, setIsMenuOpen }) {
     
     const handleNavClick = (windowName) => {
+        playClick(); // <-- FIX: Play sound on navigation
         setActiveWindow(windowName);
         setIsMenuOpen(false); // Close menu on click
     };
