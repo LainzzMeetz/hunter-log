@@ -3,17 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { styles } from './styles';
 
-// --- NEW "SAFE" AUDIO LOGIC ---
-// This function safely creates and plays a sound
-const playSound = (src) => {
-  try {
-    const sound = new Audio(src);
-    sound.currentTime = 0;
-    // .play() can fail if the user hasn't interacted, so we add a .catch()
-    sound.play().catch(e => console.warn("Audio play failed:", e));
-  } catch (e) {
-    console.error("Audio file error (is the file missing in /public/audio?):", e);
-  }
+// --- NEW FIX: Create ALL Audio Objects Globally ---
+const clickSound = new Audio('/audio/click.mp3');
+const startSound = new Audio('/audio/timer_start.mp3');
+const completeSound = new Audio('/audio/quest_complete.mp3');
+
+const play = (audio) => {
+    audio.currentTime = 0;
+    audio.play().catch(e => console.warn("Audio play failed on timer:", e));
 };
 // ---
 
@@ -38,18 +35,18 @@ function Timer({ quest, onComplete }) {
     } else if (isActive && totalSeconds === 0) {
       setIsActive(false);
       setIsDone(true);
-      playSound('/audio/quest_complete.mp3'); // Use the safe function
+      play(completeSound); // Use the global play function
     }
     return () => clearInterval(interval);
   }, [isActive, totalSeconds]);
 
   const handleStart = () => {
-    playSound('/audio/timer_start.mp3'); // Use the safe function
+    play(startSound); // Use the global play function
     setIsActive(true);
   };
 
   const handleRestart = () => {
-    playSound('/audio/click.mp3'); // Use the safe function
+    play(clickSound); // Use the global play function
     setIsActive(false);
     setIsDone(false);
     setTotalSeconds(quest.duration_minutes * 60);
