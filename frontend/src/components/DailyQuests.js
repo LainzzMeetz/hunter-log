@@ -6,26 +6,11 @@ import SystemWindow from './SystemWindow';
 import { styles } from './styles';
 import Timer from './Timer';
 
-const playSound = (src) => {
-  try {
-    const sound = new Audio(src);
-    sound.currentTime = 0;
-    sound.play().catch(e => console.warn("Audio play failed:", e));
-  } catch (e) {
-    console.error("Audio file error:", e);
-  }
-};
-
-// --- NEW HELPER FUNCTION ---
-// This turns "ai_ml_skill" into "AI/ML" for display
-const formatTrackName = (track) => {
-  switch (track) {
-    case 'embedded_skill': return 'EMBEDDED';
-    case 'ai_ml_skill': return 'AI/ML';
-    case 'software_dev_skill': return 'SOFTWARE DEV';
-    case 'quantum_computing': return 'QUANTUM';
-    default: return track.toUpperCase();
-  }
+// --- NEW FIX: Create the Audio Object Globally (Only once) ---
+const clickSound = new Audio('/audio/click.mp3');
+const playClick = () => {
+    clickSound.currentTime = 0;
+    clickSound.play().catch(e => console.warn("Click sound blocked by browser policy."));
 };
 // ---
 
@@ -43,7 +28,7 @@ function DailyQuests({ player, setPlayer }) {
   }, [player]);
 
   const handleToggleSubtask = async (questId, subTaskTitle) => {
-    playSound('/audio/click.mp3');
+    playClick(); // Use the global play function
     try {
       const res = await axios.put(
         `https://hunter-log.onrender.com/api/quests/${questId}/subtask/${subTaskTitle}`
@@ -118,11 +103,9 @@ function DailyQuests({ player, setPlayer }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
               <span>{quest.title}</span>
               
-              {/* --- FIX: SMART REWARD DISPLAY --- */}
               {quest.stat_reward && (
                 <span style={{...styles.font, color: styles.title.color}}>
                   +{quest.exp_grant} EXP | +{quest.stat_points} 
-                  {/* If reward is "study", display the player's active track */}
                   {quest.stat_reward === 'study' && player ? 
                     formatTrackName(player.active_skill_track) 
                     : 
@@ -138,7 +121,8 @@ function DailyQuests({ player, setPlayer }) {
             
             {quest.duration_minutes > 0 && !quest.completed && (
               <div style={{marginTop: '15px'}}>
-                <Timer quest={quest} onComplete={handleCompleteQuest} />
+                {/* Timer component will also be updated */}
+                <Timer quest={quest} onComplete={handleCompleteQuest} /> 
               </div>
             )}
             
