@@ -1,6 +1,6 @@
 // frontend/src/components/Sidebar.js
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion'; // <-- FIX APPLIED HERE
 
 const SYSTEM_BLUE = '#00bfff';
 const SYSTEM_FONT = "'Share Tech Mono', monospace";
