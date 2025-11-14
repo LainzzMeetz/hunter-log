@@ -4,21 +4,22 @@ import { motion } from 'framer-motion';
 import SystemWindow from './SystemWindow';
 import { styles } from './styles';
 
-const gridStyles = {
+const statStyles = {
+  // Simple full width container
   container: {
-    width: '95%', // CRITICAL FIX: Use percentage width
-    maxWidth: '850px', 
+    width: '100%',
   },
-  statGrid: {
-    display: 'flex', // FIX: Change to flex
-    flexWrap: 'wrap', // FIX: Allow wrapping
-    justifyContent: 'space-between',
-    gap: '20px',
-  },
+  // The block for each stat category (Physical, Mental, Skill)
   statBlock: {
-    flex: '1 1 200px', // FIX: Allow blocks to shrink/grow, base width 200px
-    minWidth: '200px',
+    marginBottom: '20px',
+    padding: '10px 0',
   },
+  // Subtitle styling is used for Physical/Mental/Skill Stats
+  subtitle: {
+    ...styles.subtitle,
+    marginTop: '10px',
+    borderBottom: `1px solid ${styles.title.color}33`,
+  }
 };
 
 function PlayerStats({ player }) {
@@ -35,9 +36,10 @@ function PlayerStats({ player }) {
 
   return (
     <SystemWindow layout>
-      <div style={gridStyles.container}>
+      <div style={statStyles.container}>
         <h2 style={styles.title}>[ Player Stats ]</h2>
         
+        {/* --- TOP-LEVEL STATS (Always single column) --- */}
         <div style={styles.statRow}>
           <span style={styles.statLabel}>Level</span>
           <span style={styles.statValue}>{player.level}</span>
@@ -55,32 +57,30 @@ function PlayerStats({ player }) {
           />
         </div>
         
-        <div style={gridStyles.statGrid}>
-          
-          <div style={gridStyles.statBlock}>
-            <h3 style={styles.subtitle}>Physical Stats</h3>
-            <div style={styles.statRow}><span style={styles.statLabel}>Strength</span><span style={styles.statValue}>{player.stats.strength}</span></div>
-            <div style={styles.statRow}><span style={styles.statLabel}>Stamina</span><span style={styles.statValue}>{player.stats.stamina}</span></div>
-            <div style={styles.statRow}><span style={styles.statLabel}>Vitality</span><span style={styles.statValue}>{player.stats.vitality}</span></div>
-          </div>
-          
-          <div style={gridStyles.statBlock}>
-            <h3 style={styles.subtitle}>Mental Stats</h3>
-            <div style={styles.statRow}><span style={styles.statLabel}>Focus</span><span style={styles.statValue}>{player.stats.focus}</span></div>
-            <div style={styles.statRow}><span style={styles.statLabel}>Clarity</span><span style={styles.statValue}>{player.stats.clarity}</span></div>
-            <div style={styles.statRow}><span style={styles.statLabel}>Willpower</span><span style={styles.statValue}>{player.stats.willpower}</span></div>
-            <div style={styles.statRow}><span style={styles.statLabel}>Confidence</span><span style={styles.statValue}>{player.stats.confidence}</span></div>
-          </div>
-
-          <div style={gridStyles.statBlock}>
-            <h3 style={styles.subtitle}>Skill Stats</h3>
-            <div style={styles.statRow}><span style={styles.statLabel}>Embedded</span><span style={styles.statValue}>{player.stats.embedded_skill}</span></div>
-            <div style={styles.statRow}><span style={styles.statLabel}>AI/ML</span><span style={styles.statValue}>{player.stats.ai_ml_skill}</span></div>
-            <div style={styles.statRow}><span style={styles.statLabel}>Software Dev</span><span style={styles.statValue}>{player.stats.software_dev_skill}</span></div>
-            <div style={styles.statRow}><span style={styles.statLabel}>Quantum</span><span style={styles.statValue}>{player.stats.quantum_computing}</span></div>
-          </div>
-          
+        {/* --- STAT BLOCKS (Single Column Stacked) --- */}
+        <div style={statStyles.statBlock}>
+          <h3 style={statStyles.subtitle}>Physical Stats</h3>
+          <div style={styles.statRow}><span style={styles.statLabel}>Strength</span><span style={styles.statValue}>{player.stats.strength}</span></div>
+          <div style={styles.statRow}><span style={styles.statLabel}>Stamina</span><span style={styles.statValue}>{player.stats.stamina}</span></div>
+          <div style={styles.statRow}><span style={styles.statLabel}>Vitality</span><span style={styles.statValue}>{player.stats.vitality}</span></div>
         </div>
+        
+        <div style={statStyles.statBlock}>
+          <h3 style={statStyles.subtitle}>Mental Stats</h3>
+          <div style={styles.statRow}><span style={styles.statLabel}>Focus</span><span style={styles.statValue}>{player.stats.focus}</span></div>
+          <div style={styles.statRow}><span style={styles.statLabel}>Clarity</span><span style={styles.statValue}>{player.stats.clarity}</span></div>
+          <div style={styles.statRow}><span style={styles.statLabel}>Willpower</span><span style={styles.statValue}>{player.stats.willpower}</span></div>
+          <div style={styles.statRow}><span style={styles.statLabel}>Confidence</span><span style={styles.statValue}>{player.stats.confidence}</span></div>
+        </div>
+
+        <div style={statStyles.statBlock}>
+          <h3 style={statStyles.subtitle}>Skill Stats</h3>
+          <div style={styles.statRow}><span style={styles.statLabel}>Embedded</span><span style={styles.statValue}>{player.stats.embedded_skill}</span></div>
+          <div style={styles.statRow}><span style={styles.statLabel}>AI/ML</span><span style={styles.statValue}>{player.stats.ai_ml_skill}</span></div>
+          <div style={styles.statRow}><span style={styles.statLabel}>Software Dev</span><span style={styles.statValue}>{player.stats.software_dev_skill}</span></div>
+          <div style={styles.statRow}><span style={styles.statLabel}>Quantum</span><span style={styles.statValue}>{player.stats.quantum_computing}</span></div>
+        </div>
+        
       </div>
     </SystemWindow>
   );
