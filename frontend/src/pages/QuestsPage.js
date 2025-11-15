@@ -4,28 +4,33 @@ import DailyQuests from '../components/DailyQuests';
 import MainQuests from '../components/MainQuests';
 
 const styles = {
-  // CRITICAL FIX: The layout now enforces a single column
   layout: {
     display: 'flex',
     flexDirection: 'column',
     gap: '20px',
-    width: '95vw', // Full width of viewport
-    maxWidth: '500px', // Maximum desktop width
+    width: '95vw',
+    maxWidth: '500px',
   }
 };
 
-function QuestsPage({ player, setPlayer }) { 
+// This component is now just a "filter"
+function QuestsPage({ player, setPlayer, allQuests }) { 
+  
+  // Filter the master list
+  const dailyQuests = allQuests.filter(q => q.type === 'daily');
+  const mainQuests = allQuests.filter(q => q.type === 'main');
+  
   return (
     <div style={styles.layout}>
-      
-      {/* Daily Quests (with Sub-Tasks & Timers) */}
-      <DailyQuests player={player} setPlayer={setPlayer} />
-      
-      {/* Main Quests (below Daily Quests) */}
-      <MainQuests setPlayer={setPlayer} />
-
-      {/* We can add a Weekly Quests component here later */}
-
+      <DailyQuests 
+        player={player} 
+        setPlayer={setPlayer} // Pass the main update function
+        quests={dailyQuests} // Pass the filtered list
+      />
+      <MainQuests 
+        setPlayer={setPlayer} // Pass the main update function
+        quests={mainQuests} // Pass the filtered list
+      />
     </div>
   );
 }
