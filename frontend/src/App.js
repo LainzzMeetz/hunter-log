@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import axios from 'axios';
 
-// --- IMPORT YOUR "SHELL" AND "PAGES" ---
 import Sidebar from './components/Sidebar';
 import StatsPage from './pages/StatsPage';
 import QuestsPage from './pages/QuestsPage';
@@ -18,7 +17,7 @@ const styles = {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'flex-start',
-    padding: '10px 5px', // CRITICAL: Reduced side padding for mobile fit
+    padding: '10px 5px',
     minHeight: '100vh',
     width: '100%',
   }
@@ -36,42 +35,72 @@ function App() {
   const [activeWindow, setActiveWindow] = useState('STATS');
   const [player, setPlayer] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  
+  // --- NEW: Master Quest List State ---
+  const [allQuests, setAllQuests] = useState([]);
 
-  // Fetch the player data *once* when the app loads
-  useEffect(() => {
+  // This function is now the *only* way to refresh all data
+  const fetchAllData = () => {
     axios.get('https://hunter-log.onrender.com/api/player')
       .then(res => setPlayer(res.data))
       .catch(err => console.error("Error fetching player data:", err));
-  }, []);
+      
+    axios.get('https://hunter-log.onrender.com/api/quests')
+      .then(res => setAllQuests(res.data))
+      .catch(err => console.error("Error fetching quests:", err));
+  };
+
+  // Fetch all data *once* when the app loads
+  useEffect(() => {
+    fetchAllData();
+  }, []); // The empty [] means this runs only once
+
+  // This function will be passed down to all components
+  // It updates the Player AND re-fetches the quest list
+  const updatePlayerAndQuests = (newPlayerData) => {
+    setPlayer(newPlayerData); // Update player state immediately
+    // Re-fetch quests to show new checkmarks
+    axios.get('https://hunter-log.onrender.com/api/quests')
+      .then(res => setAllQuests(res.data))
+      .catch(err => console.error("Error fetching quests:", err));
+  };
+
 
   const renderWindow = () => {
     switch (activeWindow) {
-      case 'STATS': return <StatsPage key="stats" player={player} setPlayer={setPlayer} />;
-      case 'QUESTS': return <QuestsPage key="quests" player={player} setPlayer={setPlayer} />;
-      case 'SKILLS': return <SkillsPage key="skills" player={player} setPlayer={setPlayer} />;
-      case 'MAP': return <MapPage key="map" />;
-      case 'INVENTORY': return <InventoryPage key="inventory" />;
-      case 'BOSSES': return <BossesPage key="bosses" />;
-      case 'LOGBOOK': return <LogbookPage key="logbook" />;
-      default: return <StatsPage key="stats" player={player} setPlayer={setPlayer} />;
+      case 'STATS':
+        return <StatsPage key="stats" player={player} />;
+      case 'QUESTS':
+        return <QuestsPage 
+                  key="quests" 
+                  player={player} 
+                  setPlayer={updatePlayerAndQuests} // <-- Pass the new function
+                  allQuests={allQuests} // <-- Pass the master quest list
+                />;
+      case 'SKILLS':
+        return <SkillsPage key="skills" player={player} setPlayer={setPlayer} />;
+      case 'MAP':
+        return <MapPage key="map" />;
+      case 'INVENTORY':
+        return <InventoryPage key="inventory" />;
+      case 'BOSSES':
+        return <BossesPage key="bosses" />;
+      case 'LOGBOOK':
+        return <LogbookPage key="logbook" />;
+      default:
+        return <StatsPage key="stats" player={player} />;
     }
   };
   
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#000' }}>
-      
-      {/* 1. The Mobile Sidebar (always fixed) */}
       <Sidebar 
         activeWindow={activeWindow} 
         setActiveWindow={setActiveWindow} 
         isMenuOpen={isMenuOpen}
         setIsMenuOpen={setIsMenuOpen}
       />
-      
-      {/* 2. Content Area */}
       <div style={styles.pageContainer}>
-        
-        {/* 3. The Hamburger Icon to open the menu */}
         <motion.button
             style={menuButtonStyles}
             onClick={() => setIsMenuOpen(true)}
@@ -79,8 +108,6 @@ function App() {
         >
             ☰ Menu
         </motion.button>
-
-        {/* 4. The Content Window */}
         <AnimatePresence mode="wait">
           <motion.div
             key={activeWindow}
@@ -98,7 +125,6 @@ function App() {
   );
 }
 
-// Simple styling for the fixed menu button
 const menuButtonStyles = {
     position: 'fixed',
     top: '10px',
@@ -112,6 +138,5 @@ const menuButtonStyles = {
     cursor: 'pointer',
     fontSize: '14px',
 };
-
 
 export default App;
