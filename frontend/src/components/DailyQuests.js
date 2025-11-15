@@ -6,7 +6,16 @@ import SystemWindow from './SystemWindow';
 import { styles } from './styles';
 import Timer from './Timer';
 
-const clickSound = new Audio('/audio/click.mp3');
+// --- THIS IS THE FIX: Add BOTH helper functions ---
+const playSound = (src) => {
+  try {
+    const sound = new Audio(src);
+    sound.currentTime = 0;
+    sound.play().catch(e => console.warn("Audio play failed:", e));
+  } catch (e) {
+    console.error("Audio file error:", e);
+  }
+};
 
 const formatTrackName = (track) => {
   switch (track) {
@@ -17,18 +26,19 @@ const formatTrackName = (track) => {
     default: return track.toUpperCase();
   }
 };
+// --- END OF FIX ---
+
 
 // This is now a "dumb" component. It just receives props.
 function DailyQuests({ player, setPlayer, quests }) {
 
   const handleToggleSubtask = async (questId, subTaskTitle) => {
-    playSound('/audio/click.mp3');
+    playSound('/audio/click.mp3'); // This line will now work
     try {
       // Call the backend
       const res = await axios.put(
         `https://hunter-log.onrender.com/api/quests/${questId}/subtask/${subTaskTitle}`
       );
-      // --- THIS IS THE FIX ---
       // Call the main App.js update function
       setPlayer(res.data);
     } catch (error) {
@@ -41,7 +51,6 @@ function DailyQuests({ player, setPlayer, quests }) {
       const res = await axios.put(
         `https://hunter-log.onrender.com/api/quests/${questId}/complete`
       );
-      // --- THIS IS THE FIX ---
       setPlayer(res.data);
     } catch (error) {
       console.error("Error completing timer quest:", error);
@@ -49,7 +58,6 @@ function DailyQuests({ player, setPlayer, quests }) {
   };
 
   const SubTaskChecklist = ({ quest }) => (
-    // (This component is unchanged)
     <div style={{ marginTop: '10px', paddingLeft: '20px' }}>
       {quest.sub_tasks.map(task => (
         <div 
