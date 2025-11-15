@@ -6,8 +6,19 @@ import SystemWindow from './SystemWindow';
 import { styles } from './styles';
 import Timer from './Timer';
 
-const clickSound = new Audio('/audio/click.mp3');
+// --- THIS IS THE FIX 1: The missing function ---
+const playSound = (src) => {
+  try {
+    const sound = new Audio(src);
+    sound.currentTime = 0;
+    sound.play().catch(e => console.warn("Audio play failed:", e));
+  } catch (e) {
+    console.error("Audio file error:", e);
+  }
+};
+// ---
 
+// --- FIX 2: We also need the formatTrackName function ---
 const formatTrackName = (track) => {
   switch (track) {
     case 'embedded_skill': return 'EMBEDDED';
@@ -17,6 +28,7 @@ const formatTrackName = (track) => {
     default: return track.toUpperCase();
   }
 };
+// ---
 
 function DailyQuests({ player, setPlayer }) {
   const [quests, setQuests] = useState([]);
@@ -31,36 +43,35 @@ function DailyQuests({ player, setPlayer }) {
     if (player) fetchQuests();
   }, [player]);
 
-  // --- CRITICAL FIX 1: UPGRADED SUB-TASK HANDLER ---
   const handleToggleSubtask = async (questId, subTaskTitle) => {
-    playSound('/audio/click.mp3');
+    playSound('/audio/click.mp3'); // This line will now work
     try {
-      // This endpoint now returns the updated PLAYER object
       const res = await axios.put(
         `https://hunter-log.onrender.com/api/quests/${questId}/subtask/${subTaskTitle}`
       );
       
-      // Update the main player state (this will show the stat increase)
-      setPlayer(res.data);
+      setQuests(prevQuests => 
+        prevQuests.map(q => q._id === questId ? res.data : q)
+      );
       
-      // We must also refresh the quest list to show the checkmark
-      fetchQuests();
+      if (res.data.completed) {
+        handleCompleteQuest(questId);
+      }
       
     } catch (error) {
       console.error("Error toggling sub-task:", error);
     }
   };
 
-  // --- CRITICAL FIX 2: This function is now ONLY for timers ---
   const handleCompleteQuest = async (questId) => {
     try {
       const res = await axios.put(
         `https://hunter-log.onrender.com/api/quests/${questId}/complete`
       );
-      setPlayer(res.data); // Update player (EXP, stats, etc.)
-      fetchQuests(); // Refresh the list
+      setPlayer(res.data);
+      fetchQuests();
     } catch (error) {
-      console.error("Error completing timer quest:", error);
+      console.error("Error completing quest:", error);
     }
   };
 
