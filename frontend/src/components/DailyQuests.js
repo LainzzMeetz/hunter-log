@@ -8,8 +8,6 @@ import Timer from './Timer';
 
 const clickSound = new Audio('/audio/click.mp3');
 
-// --- NEW HELPER FUNCTION FIX ---
-// This function must be defined *here* to be used by the component.
 const formatTrackName = (track) => {
   switch (track) {
     case 'embedded_skill': return 'EMBEDDED';
@@ -19,7 +17,6 @@ const formatTrackName = (track) => {
     default: return track.toUpperCase();
   }
 };
-// ---
 
 function DailyQuests({ player, setPlayer }) {
   const [quests, setQuests] = useState([]);
@@ -34,35 +31,36 @@ function DailyQuests({ player, setPlayer }) {
     if (player) fetchQuests();
   }, [player]);
 
+  // --- CRITICAL FIX 1: UPGRADED SUB-TASK HANDLER ---
   const handleToggleSubtask = async (questId, subTaskTitle) => {
-    // ... (logic is unchanged)
+    playSound('/audio/click.mp3');
     try {
+      // This endpoint now returns the updated PLAYER object
       const res = await axios.put(
         `https://hunter-log.onrender.com/api/quests/${questId}/subtask/${subTaskTitle}`
       );
       
-      setQuests(prevQuests => 
-        prevQuests.map(q => q._id === questId ? res.data : q)
-      );
+      // Update the main player state (this will show the stat increase)
+      setPlayer(res.data);
       
-      if (res.data.completed) {
-        handleCompleteQuest(questId);
-      }
+      // We must also refresh the quest list to show the checkmark
+      fetchQuests();
       
     } catch (error) {
       console.error("Error toggling sub-task:", error);
     }
   };
 
+  // --- CRITICAL FIX 2: This function is now ONLY for timers ---
   const handleCompleteQuest = async (questId) => {
     try {
       const res = await axios.put(
         `https://hunter-log.onrender.com/api/quests/${questId}/complete`
       );
-      setPlayer(res.data);
-      fetchQuests();
+      setPlayer(res.data); // Update player (EXP, stats, etc.)
+      fetchQuests(); // Refresh the list
     } catch (error) {
-      console.error("Error completing quest:", error);
+      console.error("Error completing timer quest:", error);
     }
   };
 
