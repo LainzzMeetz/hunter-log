@@ -23,7 +23,7 @@ app = FastAPI()
 
 # --- Seeder Logic ---
 async def seed_database_logic():
-    print("DATABASE SEEDING v14.9 INITIATED...")
+    print("DATABASE SEEDING v14.10 INITIATED...")
     
     await Player.delete_all(); await Quest.delete_all(); await Skill.delete_all()
     await Achievement.delete_all(); await HealthMetric.delete_all(); await InventoryItem.delete_all()
@@ -48,28 +48,21 @@ async def seed_database_logic():
         exp_grant=10, rank="D", stat_reward="willpower", stat_points=1,
         sub_tasks=[ SubTask(title="Wake at 6:00 AM"), SubTask(title="Drink 500ml Water"), SubTask(title="10-min Stretch") ]
     ).insert()
-    
-    # --- THIS IS THE FIX ---
     await Quest(
         title="Meditate", description="5-10 minutes of focused breathing.", type="daily",
         exp_grant=10, rank="D", stat_reward="focus", stat_points=1,
-        duration_minutes=10 # <-- Was 5
+        duration_minutes=10
     ).insert()
-    
-    # --- THIS IS THE FIX ---
     await Quest(
         title="Workout", description="15–45 min exercise.", type="daily",
         exp_grant=20, rank="C", stat_reward="strength", stat_points=1,
-        duration_minutes=20 # <-- Was 45
+        duration_minutes=20
     ).insert()
-    
     await Quest(
         title="Study/Skill Practice", description="1–2 hrs.", type="daily",
         exp_grant=25, rank="C", stat_reward="study", stat_points=1,
-        duration_minutes=90 # <-- You set this one
+        duration_minutes=90
     ).insert()
-    # (The rest of the seeder is unchanged)
-    
     await Quest(
         title="Apply for 5 Jobs", description="Complete 5 job applications.", type="weekly",
         exp_grant=100, rank="B", stat_reward="career", stat_points=2
@@ -87,8 +80,8 @@ async def seed_database_logic():
     await MapChapter(chapter=1, title="Recovery", description="Stabilize routine...", status="active").insert()
     await Boss(name="Interview Boss", description="A high-stakes technical & behavioral challenge.").insert()
 
-    print("--- DATABASE SEEDING v14.9 COMPLETE ---")
-    return {"message": "System has been reset to v14.9 defaults (with new timer values)."}
+    print("--- DATABASE SEEDING v14.10 COMPLETE ---")
+    return {"message": "System has been reset to v14.10 defaults (with new timer values)."}
 # --- End of Seeder Logic ---
 
 
@@ -111,20 +104,21 @@ async def get_player_instance():
 
 @app.get("/")
 async def root():
-    return {"message": "Hunter's Log: [System Core v14.9 Online]"} # Version Up!
+    return {"message": "Hunter's Log: [System Core v14.10 Online]"} # Version Up!
 
 @app.get("/api/system/reset")
 async def system_reset():
     return await seed_database_logic()
 
-# (All other endpoints are unchanged)
 @app.get("/api/player", response_model=Player)
 async def get_player(): return await get_player_instance()
+
 @app.put("/api/player/set-track", response_model=Player)
 async def set_active_track(data: dict = Body(...)):
     player = await get_player_instance(); track_name = data.get("track")
     if not hasattr(player.stats, track_name): raise HTTPException(status_code=400, detail="Invalid skill track name.")
     player.active_skill_track = track_name; await player.save(); return player
+
 @app.put("/api/quests/{quest_id}/achieve", response_model=Player)
 async def achieve_main_quest(quest_id: PydanticObjectId):
     quest = await Quest.get(quest_id);
@@ -137,24 +131,30 @@ async def achieve_main_quest(quest_id: PydanticObjectId):
     while player.exp >= player.exp_to_next_level:
         player.level += 1; player.exp -= player.exp_to_next_level; player.exp_to_next_level = int(player.exp_to_next_level * 1.15); leveled_up = True
     await player.save(); return player
+
 @app.get("/api/quests", response_model=List[Quest])
 async def get_quests(type: str = None):
     if type: return await Quest.find(Quest.type == type).to_list()
     return await Quest.find_all().to_list()
+
 @app.get("/api/quests/{quest_id}", response_model=Quest)
 async def get_quest(quest_id: PydanticObjectId):
-    quest = await Quest.get(quest_id);
-    if not quest: raise HTTPException(status_code=404, detail="Quest not found"); return quest
+    quest = await Quest.get(quest_id)
+    if not quest: raise HTTPException(status_code=404, detail="Quest not found")
+    return quest
+
 @app.put("/api/quests/{quest_id}/subtask/{sub_task_title}", response_model=Player)
 async def toggle_sub_task(quest_id: PydanticObjectId, sub_task_title: str):
-    quest = await Quest.get(quest_id);
-    if not quest: raise HTTPException(status_code=404, detail="Quest not found.");
+    quest = await Quest.get(quest_id)
+    if not quest: raise HTTPException(status_code=404, detail="Quest not found.")
     if quest.completed: return await get_player_instance()
-    task_found = False; all_tasks_complete = True;
+    task_found = False; all_tasks_complete = True
     for task in quest.sub_tasks:
-        if task.title == sub_task_title: task.completed = not task.completed; task_found = True
+        if task.title == sub_task_title:
+            task.completed = not task.completed; task_found = True
         if not task.completed: all_tasks_complete = False
-    if not task_found: raise HTTPException(status_code=404, detail="Sub-task not found.");
+    if not task_found: raise HTTPException(status_code=404, detail="Sub-task not found.")
+    
     if all_tasks_complete:
         quest.completed = True; await quest.save(); player = await get_player_instance()
         if quest.stat_reward and quest.stat_points > 0:
@@ -165,11 +165,15 @@ async def toggle_sub_task(quest_id: PydanticObjectId, sub_task_title: str):
         await player.save(); return player
     else:
         await quest.save(); return await get_player_instance()
+
 @app.put("/api/quests/{quest_id}/complete", response_model=Player)
 async def complete_quest(quest_id: PydanticObjectId):
     quest = await Quest.get(quest_id);
     if not quest or quest.completed: return await get_player_instance()
-    if quest.sub_tasks: raise HTTPException(status_code=4d0, detail="This quest must be completed via its sub-tasks.")
+    
+    # --- THIS IS THE FIX: Was '4d0' ---
+    if quest.sub_tasks: raise HTTPException(status_code=400, detail="This quest must be completed via its sub-tasks.")
+    
     quest.completed = True; await quest.save(); player = await get_player_instance()
     if quest.stat_reward == "study":
         track = player.active_skill_track; current_stat_val = getattr(player.stats, track, 1); setattr(player.stats, track, current_stat_val + quest.stat_points)
@@ -179,6 +183,7 @@ async def complete_quest(quest_id: PydanticObjectId):
     while player.exp >= player.exp_to_next_level:
         player.level += 1; player.exp -= player.exp_to_next_level; player.exp_to_next_level = int(player.exp_to_next_level * 1.15); leveled_up = True
     await player.save(); return player
+
 @app.get("/api/journal", response_model=List[JournalEntry])
 async def get_journal_entries(): return await JournalEntry.find_all().sort("-date").to_list()
 @app.post("/api/journal", response_model=JournalEntry)
