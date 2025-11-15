@@ -1,24 +1,13 @@
 // frontend/src/components/DailyQuests.js
-import React, { useState, useEffect } from 'react';
+import React from 'react'; // Removed useState, useEffect
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import SystemWindow from './SystemWindow';
 import { styles } from './styles';
 import Timer from './Timer';
 
-// --- THIS IS THE FIX 1: The missing function ---
-const playSound = (src) => {
-  try {
-    const sound = new Audio(src);
-    sound.currentTime = 0;
-    sound.play().catch(e => console.warn("Audio play failed:", e));
-  } catch (e) {
-    console.error("Audio file error:", e);
-  }
-};
-// ---
+const clickSound = new Audio('/audio/click.mp3');
 
-// --- FIX 2: We also need the formatTrackName function ---
 const formatTrackName = (track) => {
   switch (track) {
     case 'embedded_skill': return 'EMBEDDED';
@@ -28,36 +17,20 @@ const formatTrackName = (track) => {
     default: return track.toUpperCase();
   }
 };
-// ---
 
-function DailyQuests({ player, setPlayer }) {
-  const [quests, setQuests] = useState([]);
-
-  const fetchQuests = () => {
-    axios.get('https://hunter-log.onrender.com/api/quests?type=daily')
-      .then(res => setQuests(res.data))
-      .catch(err => console.error("Error fetching daily quests:", err));
-  };
-  
-  useEffect(() => {
-    if (player) fetchQuests();
-  }, [player]);
+// This is now a "dumb" component. It just receives props.
+function DailyQuests({ player, setPlayer, quests }) {
 
   const handleToggleSubtask = async (questId, subTaskTitle) => {
-    playSound('/audio/click.mp3'); // This line will now work
+    playSound('/audio/click.mp3');
     try {
+      // Call the backend
       const res = await axios.put(
         `https://hunter-log.onrender.com/api/quests/${questId}/subtask/${subTaskTitle}`
       );
-      
-      setQuests(prevQuests => 
-        prevQuests.map(q => q._id === questId ? res.data : q)
-      );
-      
-      if (res.data.completed) {
-        handleCompleteQuest(questId);
-      }
-      
+      // --- THIS IS THE FIX ---
+      // Call the main App.js update function
+      setPlayer(res.data);
     } catch (error) {
       console.error("Error toggling sub-task:", error);
     }
@@ -68,14 +41,15 @@ function DailyQuests({ player, setPlayer }) {
       const res = await axios.put(
         `https://hunter-log.onrender.com/api/quests/${questId}/complete`
       );
+      // --- THIS IS THE FIX ---
       setPlayer(res.data);
-      fetchQuests();
     } catch (error) {
-      console.error("Error completing quest:", error);
+      console.error("Error completing timer quest:", error);
     }
   };
 
   const SubTaskChecklist = ({ quest }) => (
+    // (This component is unchanged)
     <div style={{ marginTop: '10px', paddingLeft: '20px' }}>
       {quest.sub_tasks.map(task => (
         <div 
@@ -83,18 +57,8 @@ function DailyQuests({ player, setPlayer }) {
           style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '5px' }}
           onClick={() => handleToggleSubtask(quest._id, task.title)}
         >
-          <input 
-            type="checkbox" 
-            checked={task.completed} 
-            readOnly 
-            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-          />
-          <span style={{
-            ...styles.font,
-            fontSize: '16px',
-            color: task.completed ? '#888' : '#fff',
-            textDecoration: task.completed ? 'line-through' : 'none'
-          }}>
+          <input type="checkbox" checked={task.completed} readOnly style={{ width: '18px', height: '18px', cursor: 'pointer' }}/>
+          <span style={{...styles.font, fontSize: '16px', color: task.completed ? '#888' : '#fff', textDecoration: task.completed ? 'line-through' : 'none'}}>
             {task.title}
           </span>
         </div>
@@ -109,16 +73,11 @@ function DailyQuests({ player, setPlayer }) {
         {quests.map(quest => (
           <motion.div 
             key={quest._id} 
-            style={{...styles.item, 
-              ...(quest.completed ? styles.itemCompleted : {}),
-              flexDirection: 'column',
-              alignItems: 'flex-start'
-            }}
+            style={{...styles.item, ...(quest.completed ? styles.itemCompleted : {}), flexDirection: 'column', alignItems: 'flex-start'}}
             layout
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
               <span>{quest.title}</span>
-              
               {quest.stat_reward && (
                 <span style={{...styles.font, color: styles.title.color}}>
                   +{quest.exp_grant} EXP | +{quest.stat_points} 
@@ -130,17 +89,14 @@ function DailyQuests({ player, setPlayer }) {
                 </span>
               )}
             </div>
-
             {quest.sub_tasks.length > 0 && (
               <SubTaskChecklist quest={quest} />
             )}
-            
             {quest.duration_minutes > 0 && !quest.completed && (
               <div style={{marginTop: '15px'}}>
                 <Timer quest={quest} onComplete={handleCompleteQuest} />
               </div>
             )}
-            
           </motion.div>
         ))}
       </div>
