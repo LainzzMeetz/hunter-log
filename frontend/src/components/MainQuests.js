@@ -1,5 +1,5 @@
 // frontend/src/components/MainQuests.js
-import React, { useState, useEffect } from 'react';
+import React from 'react'; // Removed useState, useEffect
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import SystemWindow from './SystemWindow';
@@ -7,27 +7,18 @@ import { styles } from './styles';
 
 const clickSound = new Audio('/audio/click.mp3');
 
-function MainQuests({ setPlayer }) {
-  const [quests, setQuests] = useState([]);
-  
-  const fetchQuests = () => {
-    axios.get('https://hunter-log.onrender.com/api/quests?type=main')
-      .then(res => setQuests(res.data))
-      .catch(err => console.error("Error fetching main quests:", err));
-  };
-  
-  useEffect(fetchQuests, []);
+// This is now a "dumb" component. It just receives props.
+function MainQuests({ setPlayer, quests }) {
   
   const handleAchieve = async (questId) => {
       clickSound.play();
       if (!window.confirm("CONFIRM ACHIEVEMENT: Are you sure you completed this Main Quest? This will grant significant EXP.")) {
-          return; // Stop if user cancels
+          return;
       }
-
       try {
           const res = await axios.put(`https://hunter-log.onrender.com/api/quests/${questId}/achieve`);
-          setPlayer(res.data); // Update player (Level Up!)
-          fetchQuests(); // Refresh the list
+          // --- THIS IS THE FIX ---
+          setPlayer(res.data);
       } catch (error) {
           console.error("Error achieving main quest:", error);
       }
@@ -50,7 +41,6 @@ function MainQuests({ setPlayer }) {
                 <div style={{fontWeight: 'bold'}}>{quest.title}</div>
                 <div style={{fontSize: '14px', color: '#aaa'}}>{quest.description}</div>
               </div>
-              
               {!quest.completed && (
                 <motion.button
                     style={styles.button}
@@ -61,7 +51,6 @@ function MainQuests({ setPlayer }) {
                   ACHIEVE
                 </motion.button>
               )}
-              
               {quest.completed && (
                 <span style={{color: '#00ff7f', fontWeight: 'bold', fontSize: '18px'}}>COMPLETE</span>
               )}
