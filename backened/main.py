@@ -21,9 +21,9 @@ class Settings(BaseSettings):
 settings = Settings()
 app = FastAPI()
 
-# --- Seeder Logic ---
+# --- Seeder Logic (Backdoor) ---
 async def seed_database_logic():
-    print("DATABASE SEEDING v14.10 INITIATED...")
+    print("DATABASE SEEDING INITIATED...")
     
     await Player.delete_all(); await Quest.delete_all(); await Skill.delete_all()
     await Achievement.delete_all(); await HealthMetric.delete_all(); await InventoryItem.delete_all()
@@ -48,29 +48,36 @@ async def seed_database_logic():
         exp_grant=10, rank="D", stat_reward="willpower", stat_points=1,
         sub_tasks=[ SubTask(title="Wake at 6:00 AM"), SubTask(title="Drink 500ml Water"), SubTask(title="10-min Stretch") ]
     ).insert()
+    
     await Quest(
         title="Meditate", description="5-10 minutes of focused breathing.", type="daily",
         exp_grant=10, rank="D", stat_reward="focus", stat_points=1,
         duration_minutes=10
     ).insert()
+    
     await Quest(
         title="Workout", description="15–45 min exercise.", type="daily",
         exp_grant=20, rank="C", stat_reward="strength", stat_points=1,
         duration_minutes=20
     ).insert()
+    
     await Quest(
         title="Study/Skill Practice", description="1–2 hrs.", type="daily",
         exp_grant=25, rank="C", stat_reward="study", stat_points=1,
         duration_minutes=90
     ).insert()
+    
     await Quest(
         title="Apply for 5 Jobs", description="Complete 5 job applications.", type="weekly",
         exp_grant=100, rank="B", stat_reward="career", stat_points=2
     ).insert()
+
     await Quest(
         title="Reawakening", description="Stabilize routine...", type="main",
         exp_grant=500, rank="A"
     ).insert()
+    
+    # --- Skills & Items ---
     await Skill(name="MCU Basics", tree="embedded", description="Core STM32/ARM concepts.").insert()
     await Skill(name="Python Refresher", tree="ai_ml", description="Data structures and syntax.").insert()
     await Skill(name="Qiskit Basics", tree="quantum", description="Running circuits on qBraid/IBM.").insert()
@@ -80,9 +87,8 @@ async def seed_database_logic():
     await MapChapter(chapter=1, title="Recovery", description="Stabilize routine...", status="active").insert()
     await Boss(name="Interview Boss", description="A high-stakes technical & behavioral challenge.").insert()
 
-    print("--- DATABASE SEEDING v14.10 COMPLETE ---")
-    return {"message": "System has been reset to v14.10 defaults (with new timer values)."}
-# --- End of Seeder Logic ---
+    print("--- DATABASE SEEDING COMPLETE ---")
+    return {"message": "System has been reset to defaults."}
 
 
 @app.on_event("startup")
@@ -104,7 +110,7 @@ async def get_player_instance():
 
 @app.get("/")
 async def root():
-    return {"message": "Hunter's Log: [System Core v14.10 Online]"} # Version Up!
+    return {"message": "Hunter's Log: [System Core Online]"}
 
 @app.get("/api/system/reset")
 async def system_reset():
@@ -137,6 +143,7 @@ async def get_quests(type: str = None):
     if type: return await Quest.find(Quest.type == type).to_list()
     return await Quest.find_all().to_list()
 
+# --- FIX 1: Removed the extra colon ':' at the end of this line ---
 @app.get("/api/quests/{quest_id}", response_model=Quest)
 async def get_quest(quest_id: PydanticObjectId):
     quest = await Quest.get(quest_id)
@@ -171,7 +178,7 @@ async def complete_quest(quest_id: PydanticObjectId):
     quest = await Quest.get(quest_id);
     if not quest or quest.completed: return await get_player_instance()
     
-    # --- THIS IS THE FIX: Was '4d0' ---
+    # --- FIX 2: Fixed '4d0' to '400' ---
     if quest.sub_tasks: raise HTTPException(status_code=400, detail="This quest must be completed via its sub-tasks.")
     
     quest.completed = True; await quest.save(); player = await get_player_instance()
@@ -184,6 +191,19 @@ async def complete_quest(quest_id: PydanticObjectId):
         player.level += 1; player.exp -= player.exp_to_next_level; player.exp_to_next_level = int(player.exp_to_next_level * 1.15); leveled_up = True
     await player.save(); return player
 
+# --- NEW DAY ENDPOINT ---
+@app.post("/api/dailies/new-day")
+async def start_new_day():
+    daily_quests = await Quest.find(Quest.type == "daily").to_list()
+    for quest in daily_quests:
+        quest.completed = False
+        if quest.sub_tasks:
+            for task in quest.sub_tasks:
+                task.completed = False
+        await quest.save()
+    return {"message": "A new day has begun."}
+
+# --- Data Endpoints ---
 @app.get("/api/journal", response_model=List[JournalEntry])
 async def get_journal_entries(): return await JournalEntry.find_all().sort("-date").to_list()
 @app.post("/api/journal", response_model=JournalEntry)
