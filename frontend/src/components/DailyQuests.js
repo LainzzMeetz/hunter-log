@@ -6,8 +6,6 @@ import SystemWindow from './SystemWindow';
 import { styles } from './styles';
 import Timer from './Timer';
 
-const clickSound = new Audio('/audio/click.mp3');
-
 const playSound = (src) => {
   try {
     const sound = new Audio(src);
@@ -41,20 +39,6 @@ function DailyQuests({ player, setPlayer }) {
     if (player) fetchQuests();
   }, [player]);
 
-  // --- NEW: START NEW DAY FUNCTION ---
-  const handleNewDay = async () => {
-    if (!window.confirm("Start a New Day? This will reset your Daily Quests (but keep your Stats).")) return;
-    
-    playSound('/audio/click.mp3');
-    try {
-      await axios.post('https://hunter-log.onrender.com/api/dailies/new-day');
-      fetchQuests(); // Refresh the list to show empty boxes
-    } catch (error) {
-      console.error("Error starting new day:", error);
-    }
-  };
-  // ---
-
   const handleToggleSubtask = async (questId, subTaskTitle) => {
     playSound('/audio/click.mp3');
     try {
@@ -62,13 +46,13 @@ function DailyQuests({ player, setPlayer }) {
         `https://hunter-log.onrender.com/api/quests/${questId}/subtask/${subTaskTitle}`
       );
       
-      setQuests(prevQuests => 
-        prevQuests.map(q => q._id === questId ? res.data : q)
-      );
+      // --- CRITICAL FIX ---
+      // 1. The response is the PLAYER, so we update the player stats.
+      setPlayer(res.data);
       
-      if (res.data.completed) {
-        handleCompleteQuest(questId);
-      }
+      // 2. We do NOT try to merge the response into the quest list.
+      // Instead, we simply re-fetch the quests to get the new checkmarks.
+      fetchQuests(); 
       
     } catch (error) {
       console.error("Error toggling sub-task:", error);
@@ -119,11 +103,15 @@ function DailyQuests({ player, setPlayer }) {
       <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
         <h2 style={{...styles.title, marginBottom: 0, borderBottom: 'none'}}>Daily Quests</h2>
         
-        {/* --- NEW DAY BUTTON --- */}
         <motion.button
           style={{...styles.button, fontSize: '12px', padding: '5px 10px', backgroundColor: 'rgba(0, 255, 127, 0.1)', color: '#00ff7f', borderColor: '#00ff7f'}}
           whileHover={{ scale: 1.05, backgroundColor: '#00ff7f', color: '#000' }}
-          onClick={handleNewDay}
+          onClick={async () => {
+             if (!window.confirm("Start a New Day? This will reset your Daily Quests.")) return;
+             playSound('/audio/click.mp3');
+             await axios.post('https://hunter-log.onrender.com/api/dailies/new-day');
+             fetchQuests();
+          }}
         >
           [ START NEW DAY ]
         </motion.button>
