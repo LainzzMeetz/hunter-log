@@ -12,17 +12,14 @@ import InventoryPage from './pages/InventoryPage';
 import BossesPage from './pages/BossesPage';
 import LogbookPage from './pages/LogbookPage';
 
-// --- STYLE FIX: SAFE ZONE PADDING ---
 const styles = {
   pageContainer: {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'flex-start',
-    // FIX: 80px top padding ensures content starts BELOW the menu button
-    padding: '80px 5px 20px 5px', 
+    padding: '10px 5px',
     minHeight: '100vh',
     width: '100%',
-    boxSizing: 'border-box',
   }
 };
 
@@ -40,7 +37,6 @@ function App() {
   const [allQuests, setAllQuests] = useState([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // Fetch Logic (Memoized to prevent loops)
   const fetchAllData = useCallback(() => {
     axios.get('https://hunter-log.onrender.com/api/player')
       .then(res => setPlayer(res.data))
@@ -55,13 +51,14 @@ function App() {
     fetchAllData();
   }, [fetchAllData]);
 
-  // Update Logic (Passed down to children)
+  // STABLE REFERENCE: This function won't change on every render
   const updatePlayerAndQuests = useCallback((newPlayerData) => {
     setPlayer(newPlayerData);
     axios.get('https://hunter-log.onrender.com/api/quests')
       .then(res => setAllQuests(res.data))
       .catch(err => console.error("Error fetching quests:", err));
   }, []);
+
 
   const renderWindow = () => {
     switch (activeWindow) {
@@ -97,19 +94,14 @@ function App() {
         isMenuOpen={isMenuOpen}
         setIsMenuOpen={setIsMenuOpen}
       />
-      
       <div style={styles.pageContainer}>
-        {/* MENU BUTTON */}
         <motion.button
             style={menuButtonStyles}
             onClick={() => setIsMenuOpen(true)}
             whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
         >
-            ☰ SYSTEM MENU
+            ☰ Menu
         </motion.button>
-
-        {/* PAGE CONTENT */}
         <AnimatePresence mode="wait">
           <motion.div
             key={activeWindow}
@@ -118,7 +110,6 @@ function App() {
             exit="out"
             variants={windowVariants}
             transition={pageTransition}
-            style={{ width: '100%' }}
           >
             {renderWindow()}
           </motion.div>
@@ -128,24 +119,18 @@ function App() {
   );
 }
 
-// --- STYLE FIX: GLASSMORPHISM BUTTON ---
 const menuButtonStyles = {
     position: 'fixed',
-    top: '15px',
-    left: '15px',
+    top: '10px',
+    left: '10px',
     zIndex: 2000,
-    // Darker, semi-transparent background
-    backgroundColor: 'rgba(0, 0, 0, 0.7)', 
-    // Blurs content behind the button when scrolling
-    backdropFilter: 'blur(8px)',
+    backgroundColor: 'rgba(0, 187, 255, 0.1)',
     color: '#00bfff',
     border: '1px solid #00bfff',
     padding: '10px 15px',
-    borderRadius: '8px',
+    borderRadius: '5px',
     cursor: 'pointer',
     fontSize: '14px',
-    fontFamily: '"Share Tech Mono", monospace',
-    boxShadow: '0 0 10px rgba(0, 191, 255, 0.2)',
 };
 
 export default App;
