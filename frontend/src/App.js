@@ -17,9 +17,11 @@ const styles = {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'flex-start',
-    padding: '10px 5px',
+    // FIXED: Added 50px top padding so the first window isn't hidden
+    padding: '50px 5px 20px 5px', 
     minHeight: '100vh',
     width: '100%',
+    boxSizing: 'border-box',
   }
 };
 
@@ -37,6 +39,7 @@ function App() {
   const [allQuests, setAllQuests] = useState([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  // Optimized data fetching (prevents lag)
   const fetchAllData = useCallback(() => {
     axios.get('https://hunter-log.onrender.com/api/player')
       .then(res => setPlayer(res.data))
@@ -51,14 +54,13 @@ function App() {
     fetchAllData();
   }, [fetchAllData]);
 
-  // STABLE REFERENCE: This function won't change on every render
+  // Stable update function (prevents crashes/re-renders)
   const updatePlayerAndQuests = useCallback((newPlayerData) => {
     setPlayer(newPlayerData);
     axios.get('https://hunter-log.onrender.com/api/quests')
       .then(res => setAllQuests(res.data))
       .catch(err => console.error("Error fetching quests:", err));
   }, []);
-
 
   const renderWindow = () => {
     switch (activeWindow) {
@@ -88,49 +90,4 @@ function App() {
   
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#000' }}>
-      <Sidebar 
-        activeWindow={activeWindow} 
-        setActiveWindow={setActiveWindow} 
-        isMenuOpen={isMenuOpen}
-        setIsMenuOpen={setIsMenuOpen}
-      />
-      <div style={styles.pageContainer}>
-        <motion.button
-            style={menuButtonStyles}
-            onClick={() => setIsMenuOpen(true)}
-            whileHover={{ scale: 1.1 }}
-        >
-            ☰ Menu
-        </motion.button>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeWindow}
-            initial="initial"
-            animate="in"
-            exit="out"
-            variants={windowVariants}
-            transition={pageTransition}
-          >
-            {renderWindow()}
-          </motion.div>
-        </AnimatePresence>
-      </div>
-    </div>
-  );
-}
-
-const menuButtonStyles = {
-    position: 'fixed',
-    top: '10px',
-    left: '10px',
-    zIndex: 2000,
-    backgroundColor: 'rgba(0, 187, 255, 0.1)',
-    color: '#00bfff',
-    border: '1px solid #00bfff',
-    padding: '10px 15px',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    fontSize: '14px',
-};
-
-export default App;
+      <Sidebar
