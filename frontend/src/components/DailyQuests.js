@@ -12,7 +12,7 @@ const playSound = (src) => {
     sound.currentTime = 0;
     sound.play().catch(e => console.warn("Audio play failed:", e));
   } catch (e) {
-    console.error("Audio file error:", e);
+    console.warn("Audio error", e);
   }
 };
 
@@ -26,18 +26,14 @@ const formatTrackName = (track) => {
   }
 };
 
-function DailyQuests({ player, setPlayer }) {
-  const [quests, setQuests] = useState([]);
+function DailyQuests({ player, setPlayer, quests: initialQuests }) {
+  // We use local state for immediate UI feedback, 
+  // but we sync with props when they change.
+  const [quests, setQuests] = useState(initialQuests || []);
 
-  const fetchQuests = () => {
-    axios.get('https://hunter-log.onrender.com/api/quests?type=daily')
-      .then(res => setQuests(res.data))
-      .catch(err => console.error("Error fetching daily quests:", err));
-  };
-  
   useEffect(() => {
-    if (player) fetchQuests();
-  }, [player]);
+    setQuests(initialQuests || []);
+  }, [initialQuests]);
 
   const handleToggleSubtask = async (questId, subTaskTitle) => {
     playSound('/audio/click.mp3');
@@ -46,13 +42,12 @@ function DailyQuests({ player, setPlayer }) {
         `https://hunter-log.onrender.com/api/quests/${questId}/subtask/${subTaskTitle}`
       );
       
-      // --- CRITICAL FIX ---
-      // 1. The response is the PLAYER, so we update the player stats.
+      // Update global player state
       setPlayer(res.data);
       
-      // 2. We do NOT try to merge the response into the quest list.
-      // Instead, we simply re-fetch the quests to get the new checkmarks.
-      fetchQuests(); 
+      // Update local quest state immediately to show checkmark
+      // (Optimistic update pattern can be added here, 
+      // but for now we rely on the parent refreshing the list)
       
     } catch (error) {
       console.error("Error toggling sub-task:", error);
@@ -65,9 +60,22 @@ function DailyQuests({ player, setPlayer }) {
         `https://hunter-log.onrender.com/api/quests/${questId}/complete`
       );
       setPlayer(res.data);
-      fetchQuests();
     } catch (error) {
       console.error("Error completing quest:", error);
+    }
+  };
+
+  const handleNewDay = async () => {
+    if (!window.confirm("Start a New Day? This will reset your Daily Quests.")) return;
+    playSound('/audio/click.mp3');
+    try {
+      await axios.post('https://hunter-log.onrender.com/api/dailies/new-day');
+      // Trigger a refresh by calling setPlayer with current player
+      // This is a hacky way to force a refresh, ideal is to have a refreshQuests prop
+      // But for now, the App.js logic will handle the refresh on next cycle
+      window.location.reload(); // Hard refresh to ensure clean state
+    } catch (error) {
+      console.error("Error starting new day:", error);
     }
   };
 
@@ -106,12 +114,7 @@ function DailyQuests({ player, setPlayer }) {
         <motion.button
           style={{...styles.button, fontSize: '12px', padding: '5px 10px', backgroundColor: 'rgba(0, 255, 127, 0.1)', color: '#00ff7f', borderColor: '#00ff7f'}}
           whileHover={{ scale: 1.05, backgroundColor: '#00ff7f', color: '#000' }}
-          onClick={async () => {
-             if (!window.confirm("Start a New Day? This will reset your Daily Quests.")) return;
-             playSound('/audio/click.mp3');
-             await axios.post('https://hunter-log.onrender.com/api/dailies/new-day');
-             fetchQuests();
-          }}
+          onClick={handleNewDay}
         >
           [ START NEW DAY ]
         </motion.button>
