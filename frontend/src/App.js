@@ -1,5 +1,5 @@
 // frontend/src/App.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import axios from 'axios';
 
@@ -34,13 +34,10 @@ const pageTransition = { type: "tween", ease: "anticipate", duration: 0.4 };
 function App() {
   const [activeWindow, setActiveWindow] = useState('STATS');
   const [player, setPlayer] = useState(null);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  
-  // --- NEW: Master Quest List State ---
   const [allQuests, setAllQuests] = useState([]);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // This function is now the *only* way to refresh all data
-  const fetchAllData = () => {
+  const fetchAllData = useCallback(() => {
     axios.get('https://hunter-log.onrender.com/api/player')
       .then(res => setPlayer(res.data))
       .catch(err => console.error("Error fetching player data:", err));
@@ -48,22 +45,19 @@ function App() {
     axios.get('https://hunter-log.onrender.com/api/quests')
       .then(res => setAllQuests(res.data))
       .catch(err => console.error("Error fetching quests:", err));
-  };
+  }, []);
 
-  // Fetch all data *once* when the app loads
   useEffect(() => {
     fetchAllData();
-  }, []); // The empty [] means this runs only once
+  }, [fetchAllData]);
 
-  // This function will be passed down to all components
-  // It updates the Player AND re-fetches the quest list
-  const updatePlayerAndQuests = (newPlayerData) => {
-    setPlayer(newPlayerData); // Update player state immediately
-    // Re-fetch quests to show new checkmarks
+  // STABLE REFERENCE: This function won't change on every render
+  const updatePlayerAndQuests = useCallback((newPlayerData) => {
+    setPlayer(newPlayerData);
     axios.get('https://hunter-log.onrender.com/api/quests')
       .then(res => setAllQuests(res.data))
       .catch(err => console.error("Error fetching quests:", err));
-  };
+  }, []);
 
 
   const renderWindow = () => {
@@ -74,8 +68,8 @@ function App() {
         return <QuestsPage 
                   key="quests" 
                   player={player} 
-                  setPlayer={updatePlayerAndQuests} // <-- Pass the new function
-                  allQuests={allQuests} // <-- Pass the master quest list
+                  setPlayer={updatePlayerAndQuests} 
+                  allQuests={allQuests} 
                 />;
       case 'SKILLS':
         return <SkillsPage key="skills" player={player} setPlayer={setPlayer} />;
