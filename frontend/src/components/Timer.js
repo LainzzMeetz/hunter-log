@@ -1,99 +1,136 @@
 // frontend/src/components/Timer.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { styles } from './styles';
 
-// --- NEW FIX: Create ALL Audio Objects Globally ---
-const clickSound = new Audio('/audio/click.mp3');
-const startSound = new Audio('/audio/timer_start.mp3');
-const completeSound = new Audio('/audio/quest_complete.mp3');
-
-const play = (audio) => {
-    audio.currentTime = 0;
-    audio.play().catch(e => console.warn("Audio play failed on timer:", e));
+// Safe Audio Player (Prevents crashes)
+const safePlay = (path) => {
+  try {
+    const audio = new Audio(path);
+    audio.volume = 0.5;
+    audio.play().catch(() => console.warn("Audio blocked (harmless)."));
+  } catch (err) {
+    console.warn("Audio error (harmless).");
+  }
 };
-// ---
 
-// Helper function to format the timer
-function formatTime(totalSeconds) {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-}
+const formatTime = (seconds) => {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+};
 
 function Timer({ quest, onComplete }) {
-  const [totalSeconds, setTotalSeconds] = useState(quest.duration_minutes * 60);
+  // 1. Internal State (Isolated from Parent)
+  const durationSec = quest.duration_minutes * 60;
+  const [timeLeft, setTimeLeft] = useState(durationSec);
   const [isActive, setIsActive] = useState(false);
-  const [isDone, setIsDone] = useState(false);
+  
+  // 2. Refs for Mutable Variables (No Re-renders)
+  const endTimeRef = useRef(null);
+  const timerIdRef = useRef(null);
 
-  useEffect(() => {
-    let interval = null;
-    if (isActive && totalSeconds > 0) {
-      interval = setInterval(() => {
-        setTotalSeconds(seconds => seconds - 1);
-      }, 1000);
-    } else if (isActive && totalSeconds === 0) {
-      setIsActive(false);
-      setIsDone(true);
-      play(completeSound); // Use the global play function
-    }
-    return () => clearInterval(interval);
-  }, [isActive, totalSeconds]);
-
-  const handleStart = () => {
-    play(startSound); // Use the global play function
+  // 3. The Delta Engine
+  const startTimer = () => {
+    safePlay('/audio/timer_start.mp3');
     setIsActive(true);
+    
+    // Calculate the absolute point in time when this finishes
+    // This makes it immune to lag or background throttling
+    const now = Date.now();
+    endTimeRef.current = now + (timeLeft * 1000);
+    
+    tick();
   };
 
-  const handleRestart = () => {
-    play(clickSound); // Use the global play function
+  const tick = () => {
+    if (!endTimeRef.current) return;
+
+    const now = Date.now();
+    const remaining = Math.ceil((endTimeRef.current - now) / 1000);
+
+    if (remaining <= 0) {
+      // Complete
+      setTimeLeft(0);
+      setIsActive(false);
+      safePlay('/audio/quest_complete.mp3');
+      timerIdRef.current = null;
+    } else {
+      // Continue
+      setTimeLeft(remaining);
+      // Recursively schedule next tick
+      timerIdRef.current = setTimeout(tick, 1000);
+    }
+  };
+
+  const stopTimer = () => {
+    if (timerIdRef.current) clearTimeout(timerIdRef.current);
+    safePlay('/audio/click.mp3');
     setIsActive(false);
-    setIsDone(false);
-    setTotalSeconds(quest.duration_minutes * 60);
+    endTimeRef.current = null;
+    // Reset to full duration
+    setTimeLeft(durationSec);
   };
 
-  const handleComplete = () => {
-    onComplete(quest._id);
-  };
+  // Cleanup on Unmount
+  useEffect(() => {
+    return () => {
+      if (timerIdRef.current) clearTimeout(timerIdRef.current);
+    };
+  }, []);
 
-  if (isDone) {
+  // Reset if Quest Duration changes externally
+  useEffect(() => {
+    if (!isActive) {
+      setTimeLeft(quest.duration_minutes * 60);
+    }
+  }, [quest.duration_minutes, isActive]);
+
+  // Render Logic
+  if (timeLeft === 0 && !isActive) {
     return (
-      <motion.button
-        style={{ ...styles.button, backgroundColor: '#00bfff', color: '#000' }}
-        onClick={handleComplete}
+      <motion.button 
+        style={{...styles.button, backgroundColor: '#00bfff', color: '#000', fontWeight: 'bold'}}
+        onClick={() => onComplete(quest._id)}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
       >
-        Click to Complete
+        CLAIM REWARD
       </motion.button>
     );
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-      <div style={{ ...styles.font, fontSize: '24px', color: '#fff' }}>
-        {formatTime(totalSeconds)}
+    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+      <div style={{ 
+          ...styles.font, 
+          fontSize: '28px', 
+          color: isActive ? '#00ff7f' : '#fff', 
+          minWidth: '90px'
+      }}>
+        {formatTime(timeLeft)}
       </div>
       
       {!isActive ? (
         <motion.button
           style={styles.button}
-          onClick={handleStart}
+          onClick={startTimer}
           whileHover={{ scale: 1.1, backgroundColor: '#00bfff', color: '#000' }}
         >
-          Start
+          START
         </motion.button>
       ) : (
-        <div style={{...styles.statLabel, color: '#ff4444'}}>In Progress...</div>
+        <motion.button
+          style={{ ...styles.button, borderColor: '#ff4444', color: '#ff4444' }}
+          onClick={stopTimer}
+          whileHover={{ scale: 1.1, backgroundColor: '#ff4444', color: '#000' }}
+        >
+          STOP
+        </motion.button>
       )}
-
-      <motion.button
-        style={{ ...styles.button, color: '#aaa', borderColor: '#555' }}
-        onClick={handleRestart}
-        whileHover={{ scale: 1.1, backgroundColor: '#555', color: '#fff' }}
-      >
-        Restart
-      </motion.button>
     </div>
   );
 }
 
-export default Timer;
+// Optimization: Only re-render if quest ID or duration changes
+export default React.memo(Timer);
