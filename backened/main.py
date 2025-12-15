@@ -21,9 +21,9 @@ class Settings(BaseSettings):
 settings = Settings()
 app = FastAPI()
 
-# --- SEEDER (EFFICIENT / EVOLUTION MODE) ---
+# --- SEEDER (FINAL LOGIC) ---
 async def seed_database_logic():
-    print("INITIALIZING SYSTEM: EFFICIENT MODE...")
+    print("INITIALIZING SYSTEM: FINAL VERSION...")
     
     await Player.delete_all(); await Quest.delete_all(); await Skill.delete_all()
     await Achievement.delete_all(); await HealthMetric.delete_all(); await InventoryItem.delete_all()
@@ -38,21 +38,22 @@ async def seed_database_logic():
         exp_to_next_level=300, 
         stats=Stats(),
         conditions=[Condition(name="Active", type="buff", description="System Online.")],
-        active_skill_track="software_dev_skill" # Default Class Track
+        active_skill_track="software_dev_skill"
     )
     await player.insert()
 
-    # --- 1. WAKE UP (Sun Exposure 5m) ---
+    # --- 1. WAKE UP (Restores CLARITY) ---
     await Quest(
         title="Wake Up", 
-        description="Jumpstart circadian rhythm.", 
+        description="Jumpstart circadian rhythm & Plan.", 
         type="daily",
         exp_grant=10, rank="E", 
-        stat_reward="willpower", stat_points=1,
+        stat_reward="willpower", stat_points=1, # Primary stat
         sub_tasks=[ 
             SubTask(title="Wake: 7:00 AM"), 
             SubTask(title="Hydrate"), 
-            SubTask(title="Sun Exposure (5 min)") 
+            SubTask(title="Sun Exposure (5 min)"),
+            SubTask(title="Plan the Day") # <--- Triggers Clarity Logic
         ]
     ).insert()
     
@@ -86,7 +87,7 @@ async def seed_database_logic():
         duration_minutes=20
     ).insert()
 
-    # --- 5. HEALTH (Simplified) ---
+    # --- 5. HEALTH ---
     await Quest(
         title="Health", 
         description="Biological recovery.", 
@@ -99,7 +100,7 @@ async def seed_database_logic():
         ]
     ).insert()
 
-    # --- 6. STUDY ---
+    # --- 6. STUDY (Dynamic Title handled in Frontend) ---
     await Quest(
         title="Study", 
         description="Skill acquisition.", 
@@ -127,7 +128,7 @@ async def seed_database_logic():
     await MapChapter(chapter=2, title="System Construction", description="Build the tool.", status="locked").insert()
 
     print("--- SYSTEM READY ---")
-    return {"message": "System Reset. Efficient Mode Active."}
+    return {"message": "System Reset. Rank System Active."}
 
 
 @app.on_event("startup")
@@ -173,14 +174,14 @@ def calculate_level_up(player, exp_change):
         player.exp -= player.exp_to_next_level
         player.exp_to_next_level = int(player.exp_to_next_level * 1.5)
     
-    # Level Down (Penalty)
+    # Level Down (Penalty) logic
     if player.exp < 0:
         if player.level > 1:
             player.level -= 1
             player.exp_to_next_level = int(player.exp_to_next_level / 1.5)
             player.exp = player.exp_to_next_level + player.exp
         else:
-            player.exp = 0
+            player.exp = 0 # Safety floor
             
     return player
 
@@ -222,8 +223,16 @@ async def toggle_sub_task(quest_id: PydanticObjectId, sub_task_title: str):
     
     if all_tasks_complete:
         quest.completed = True; await quest.save(); player = await get_player_instance()
-        if quest.stat_reward and quest.stat_points > 0:
-            current_stat_val = getattr(player.stats, quest.stat_reward, 1); setattr(player.stats, quest.stat_reward, current_stat_val + quest.stat_points)
+        
+        # Reward Logic
+        if quest.title == "Wake Up":
+            # Special case: Wake Up gives Willpower AND Clarity
+            player.stats.willpower += 1
+            player.stats.clarity += 1
+        elif quest.stat_reward and quest.stat_points > 0:
+            current_stat_val = getattr(player.stats, quest.stat_reward, 1)
+            setattr(player.stats, quest.stat_reward, current_stat_val + quest.stat_points)
+            
         player = calculate_level_up(player, quest.exp_grant)
         await player.save(); return player
     else:
@@ -234,34 +243,51 @@ async def complete_quest(quest_id: PydanticObjectId):
     quest = await Quest.get(quest_id);
     if not quest or quest.completed: return await get_player_instance()
     if quest.sub_tasks: raise HTTPException(status_code=400, detail="This quest must be completed via its sub-tasks.")
+    
     quest.completed = True; await quest.save(); player = await get_player_instance()
+    
+    # Handle Study Rewards Dynamic
     if quest.stat_reward == "study":
-        track = player.active_skill_track; current_stat_val = getattr(player.stats, track, 1); setattr(player.stats, track, current_stat_val + quest.stat_points)
+        track = player.active_skill_track
+        current_stat_val = getattr(player.stats, track, 1)
+        setattr(player.stats, track, current_stat_val + quest.stat_points)
     elif quest.stat_reward and quest.stat_points > 0:
-        current_stat_val = getattr(player.stats, quest.stat_reward, 1); setattr(player.stats, quest.stat_reward, current_stat_val + quest.stat_points)
+        current_stat_val = getattr(player.stats, quest.stat_reward, 1)
+        setattr(player.stats, quest.stat_reward, current_stat_val + quest.stat_points)
+        
     player = calculate_level_up(player, quest.exp_grant)
     await player.save(); return player
 
+# --- NEW DAY ENDPOINT (WITH SAFETY NET) ---
 @app.post("/api/dailies/new-day")
 async def start_new_day():
     daily_quests = await Quest.find(Quest.type == "daily").to_list()
     player = await get_player_instance()
+    
     missed_count = 0
     penalty_per_miss = 5
+    
     for quest in daily_quests:
         if not quest.completed: missed_count += 1
         quest.completed = False
         if quest.sub_tasks:
             for task in quest.sub_tasks: task.completed = False
         await quest.save()
+        
+    # PENALTY LOGIC WITH SAFETY NET
     if missed_count > 0:
-        total_penalty = missed_count * penalty_per_miss
-        player = calculate_level_up(player, -total_penalty) 
-        await player.save()
-        return {"message": f"Day Reset. {missed_count} missed. Penalty: -{total_penalty} EXP."}
+        # If Player is Level 1-9 (E-Rank), NO PENALTY.
+        if player.level < 10:
+             return {"message": f"Day Reset. {missed_count} missed. (No Penalty for E-Rank)."}
+        else:
+             total_penalty = missed_count * penalty_per_miss
+             player = calculate_level_up(player, -total_penalty) 
+             await player.save()
+             return {"message": f"Day Reset. {missed_count} missed. Penalty: -{total_penalty} EXP."}
+             
     return {"message": "Day Reset. All tasks done."}
 
-# --- Data Endpoints ---
+# --- Data Endpoints (Standard) ---
 @app.get("/api/journal", response_model=List[JournalEntry])
 async def get_journal_entries(): return await JournalEntry.find_all().sort("-date").to_list()
 @app.post("/api/journal", response_model=JournalEntry)
