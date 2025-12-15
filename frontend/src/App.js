@@ -148,7 +148,7 @@ function App() {
             <DailyQuests player={player} setPlayer={updatePlayer} quests={quests} />
             
             <div style={{marginTop: '30px'}}>
-               <h3 style={{color: theme.danger, fontSize: '16px'}}>BOSS / INTERVIEW LOG</h3>
+               <h3 style={{color: theme.danger, fontSize: '16px'}}>ACTIVE THREATS</h3>
                <BossesPage /> 
             </div>
           </motion.div>
