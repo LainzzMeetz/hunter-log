@@ -46,7 +46,12 @@ async def seed_database_logic():
     await Quest(
         title="Morning Routine", description="Complete your morning ritual...", type="daily",
         exp_grant=10, rank="D", stat_reward="willpower", stat_points=1,
-        sub_tasks=[ SubTask(title="Wake at 6:00 AM"), SubTask(title="Drink 500ml Water"), SubTask(title="10-min Stretch") ]
+        sub_tasks=[ 
+            # CHANGED: Updated time to 7:00 AM
+            SubTask(title="Wake at 7:00 AM"), 
+            SubTask(title="Drink 500ml Water"), 
+            SubTask(title="10-min Stretch") 
+        ]
     ).insert()
     
     await Quest(
@@ -61,7 +66,7 @@ async def seed_database_logic():
         duration_minutes=20
     ).insert()
     
-    # --- CHANGED: Removed timer (duration_minutes=0) ---
+    # Study Quest (No Timer, Manual Complete)
     await Quest(
         title="Study/Skill Practice", description="Log your study session when done.", type="daily",
         exp_grant=25, rank="C", stat_reward="study", stat_points=1,
