@@ -21,10 +21,11 @@ class Settings(BaseSettings):
 settings = Settings()
 app = FastAPI()
 
-# --- Seeder Logic (Backdoor) ---
+# --- Seeder Logic (The Stat-Link Patch) ---
 async def seed_database_logic():
     print("DATABASE SEEDING INITIATED...")
     
+    # Clear old data
     await Player.delete_all(); await Quest.delete_all(); await Skill.delete_all()
     await Achievement.delete_all(); await HealthMetric.delete_all(); await InventoryItem.delete_all()
     await MapChapter.delete_all(); await Boss.delete_all(); await JournalEntry.delete_all()
@@ -35,66 +36,114 @@ async def seed_database_logic():
         username="Laingam",
         level=1, exp=0, stats=Stats(),
         conditions=[
-            Condition(name="Emotional Damage", type="debuff", description="Healing in progress."),
-            Condition(name="Mental Fog", type="debuff", description="Recovery in progress."),
+            Condition(name="Awakening", type="buff", description="The System is live."),
         ],
         active_skill_track="software_dev_skill"
     )
     await player.insert()
 
-    # --- Core Quests ---
+    # --- 1. WILLPOWER QUEST ---
     await Quest(
-        title="Morning Routine", description="Complete your morning ritual...", type="daily",
-        exp_grant=10, rank="D", stat_reward="willpower", stat_points=1,
+        title="Morning Discipline", 
+        description="Win the morning, win the day.", 
+        type="daily",
+        exp_grant=15, rank="D", 
+        stat_reward="willpower", stat_points=1,
         sub_tasks=[ 
-            # CHANGED: Updated time to 7:00 AM
             SubTask(title="Wake at 7:00 AM"), 
-            SubTask(title="Drink 500ml Water"), 
-            SubTask(title="10-min Stretch") 
+            SubTask(title="Make Bed"), 
+            SubTask(title="Cold Shower / Face Wash") 
         ]
     ).insert()
     
+    # --- 2. FOCUS QUEST ---
     await Quest(
-        title="Meditate", description="5-10 minutes of focused breathing.", type="daily",
-        exp_grant=10, rank="D", stat_reward="focus", stat_points=1,
+        title="Deep Work / Meditate", 
+        description="10 min of pure focus. No phone.", 
+        type="daily",
+        exp_grant=15, rank="D", 
+        stat_reward="focus", stat_points=1,
         duration_minutes=10
     ).insert()
     
+    # --- 3. STRENGTH QUEST ---
     await Quest(
-        title="Workout", description="15–45 min exercise.", type="daily",
-        exp_grant=20, rank="C", stat_reward="strength", stat_points=1,
+        title="Strength Training", 
+        description="Push-ups, weights, or calisthenics.", 
+        type="daily",
+        exp_grant=30, rank="C", 
+        stat_reward="strength", stat_points=1,
         duration_minutes=20
     ).insert()
-    
-    # Study Quest (No Timer, Manual Complete)
+
+    # --- 4. STAMINA QUEST (NEW) ---
     await Quest(
-        title="Study/Skill Practice", description="Log your study session when done.", type="daily",
-        exp_grant=25, rank="C", stat_reward="study", stat_points=1,
-        duration_minutes=0 
-    ).insert()
-    
-    await Quest(
-        title="Apply for 5 Jobs", description="Complete 5 job applications.", type="weekly",
-        exp_grant=100, rank="B", stat_reward="career", stat_points=2
+        title="Cardio / Endurance", 
+        description="Run, jog, or fast walk.", 
+        type="daily",
+        exp_grant=30, rank="C", 
+        stat_reward="stamina", stat_points=1,
+        duration_minutes=20
     ).insert()
 
+    # --- 5. VITALITY QUEST (NEW) ---
     await Quest(
-        title="Reawakening", description="Stabilize routine...", type="main",
+        title="Health & Recovery", 
+        description="Sleep 7h+ and eat 1 clean meal.", 
+        type="daily",
+        exp_grant=20, rank="D", 
+        stat_reward="vitality", stat_points=1,
+        sub_tasks=[ 
+            SubTask(title="Sleep 7+ Hours"), 
+            SubTask(title="Eat Healthy Meal"),
+            SubTask(title="No Sugar") 
+        ]
+    ).insert()
+
+    # --- 6. CLARITY QUEST (NEW) ---
+    await Quest(
+        title="Mental Clarity", 
+        description="Plan your day or journal.", 
+        type="daily",
+        exp_grant=15, rank="D", 
+        stat_reward="clarity", stat_points=1,
+        sub_tasks=[ 
+            SubTask(title="Update Logbook"), 
+            SubTask(title="Plan Tomorrow") 
+        ]
+    ).insert()
+
+    # --- 7. CONFIDENCE QUEST (NEW) ---
+    await Quest(
+        title="Grooming & Self-Care", 
+        description="Look sharp to feel sharp.", 
+        type="daily",
+        exp_grant=15, rank="D", 
+        stat_reward="confidence", stat_points=1,
+        sub_tasks=[ 
+            SubTask(title="Skin Care / Grooming"), 
+            SubTask(title="Dress Well") 
+        ]
+    ).insert()
+    
+    # --- INTELLIGENCE / SKILL QUEST ---
+    await Quest(
+        title="Study / Skill Practice", 
+        description="Log your study session.", 
+        type="daily",
+        exp_grant=50, rank="B", 
+        stat_reward="study", stat_points=2, # Grants point to active track
+        duration_minutes=0 # No timer, manual complete
+    ).insert()
+
+    # --- MAIN QUEST ---
+    await Quest(
+        title="Reawakening", description="Complete all dailies for 3 days in a row.", type="main",
         exp_grant=500, rank="A"
     ).insert()
     
-    # --- Skills & Items ---
-    await Skill(name="MCU Basics", tree="embedded", description="Core STM32/ARM concepts.").insert()
-    await Skill(name="Python Refresher", tree="ai_ml", description="Data structures and syntax.").insert()
-    await Skill(name="Qiskit Basics", tree="quantum", description="Running circuits on qBraid/IBM.").insert()
-    await Skill(name="Python (FastAPI)", tree="software_dev", description="Building backend APIs.").insert()
-    await Achievement(title="Workshop Leader", description="Delivered 15+ workshops.").insert()
-    await InventoryItem(name="Laptop", type="equipment", description="Your main 'weapon'.").insert()
-    await MapChapter(chapter=1, title="Recovery", description="Stabilize routine...", status="active").insert()
-    await Boss(name="Interview Boss", description="A high-stakes technical & behavioral challenge.").insert()
-
     print("--- DATABASE SEEDING COMPLETE ---")
-    return {"message": "System has been reset to defaults."}
+    return {"message": "System reset. All Stats now have linked Quests."}
 
 
 @app.on_event("startup")
