@@ -61,10 +61,11 @@ async def seed_database_logic():
         duration_minutes=20
     ).insert()
     
+    # --- CHANGED: Removed timer (duration_minutes=0) ---
     await Quest(
-        title="Study/Skill Practice", description="1–2 hrs.", type="daily",
+        title="Study/Skill Practice", description="Log your study session when done.", type="daily",
         exp_grant=25, rank="C", stat_reward="study", stat_points=1,
-        duration_minutes=90
+        duration_minutes=0 
     ).insert()
     
     await Quest(
@@ -143,7 +144,6 @@ async def get_quests(type: str = None):
     if type: return await Quest.find(Quest.type == type).to_list()
     return await Quest.find_all().to_list()
 
-# --- FIX 1: Removed the extra colon ':' at the end of this line ---
 @app.get("/api/quests/{quest_id}", response_model=Quest)
 async def get_quest(quest_id: PydanticObjectId):
     quest = await Quest.get(quest_id)
@@ -178,7 +178,6 @@ async def complete_quest(quest_id: PydanticObjectId):
     quest = await Quest.get(quest_id);
     if not quest or quest.completed: return await get_player_instance()
     
-    # --- FIX 2: Fixed '4d0' to '400' ---
     if quest.sub_tasks: raise HTTPException(status_code=400, detail="This quest must be completed via its sub-tasks.")
     
     quest.completed = True; await quest.save(); player = await get_player_instance()
