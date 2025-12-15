@@ -2,60 +2,82 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
-import SystemWindow from '../components/SystemWindow';
+
+const theme = {
+  active: '#00bfff', // Cyan
+  completed: '#00ff7f', // Green
+  locked: '#444', // Dark Gray
+  font: '"Share Tech Mono", monospace',
+};
 
 const styles = {
   container: {
     display: 'flex',
     flexDirection: 'column',
     gap: '20px',
-    paddingRight: '10px',
-    maxHeight: '65vh',
-    overflowY: 'auto'
+    paddingBottom: '20px'
   },
   chapterCard: {
+    borderLeft: `4px solid ${theme.locked}`,
+    backgroundColor: 'rgba(20, 20, 20, 0.6)',
     padding: '15px',
-    borderLeft: '4px solid #333',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    marginBottom: '10px',
-    position: 'relative'
+    position: 'relative',
+    transition: 'all 0.3s ease'
   },
   activeCard: {
-    borderLeft: '4px solid #00bfff', // Cyan for Active
-    backgroundColor: 'rgba(0, 191, 255, 0.1)',
-    boxShadow: '0 0 15px rgba(0, 191, 255, 0.1)'
+    borderLeft: `4px solid ${theme.active}`,
+    backgroundColor: 'rgba(0, 191, 255, 0.05)',
+    boxShadow: `0 0 15px rgba(0, 191, 255, 0.1)`
   },
   completedCard: {
-    borderLeft: '4px solid #00ff7f', // Green for Completed
-    opacity: 0.6
+    borderLeft: `4px solid ${theme.completed}`,
+    opacity: 0.5
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '10px'
   },
   title: {
     color: '#fff',
-    fontSize: '18px',
+    fontSize: '16px',
     fontWeight: 'bold',
-    fontFamily: 'Share Tech Mono, monospace',
-    marginBottom: '5px'
+    letterSpacing: '1px'
   },
   status: {
     fontSize: '12px',
-    textTransform: 'uppercase',
-    float: 'right',
-    fontWeight: 'bold'
+    fontWeight: 'bold',
+    textTransform: 'uppercase'
   },
   desc: {
     color: '#aaa',
     fontSize: '14px',
+    fontFamily: theme.font,
     lineHeight: '1.4'
   },
-  button: {
-    marginTop: '10px',
-    padding: '8px 12px',
-    backgroundColor: 'transparent',
-    border: '1px solid #00bfff',
-    color: '#00bfff',
+  controls: {
+    marginTop: '15px',
+    display: 'flex',
+    gap: '10px'
+  },
+  btn: {
+    background: 'transparent',
+    border: '1px solid #555',
+    color: '#888',
+    padding: '5px 10px',
     cursor: 'pointer',
+    fontFamily: theme.font,
     fontSize: '12px',
-    fontFamily: 'Share Tech Mono, monospace'
+    textTransform: 'uppercase'
+  },
+  activeBtn: {
+    borderColor: theme.active,
+    color: theme.active,
+  },
+  completeBtn: {
+    borderColor: theme.completed,
+    color: theme.completed,
   }
 };
 
@@ -63,89 +85,73 @@ const MapPage = () => {
   const [chapters, setChapters] = useState([]);
 
   useEffect(() => {
-    fetchMap();
-  }, []);
-
-  const fetchMap = () => {
     axios.get('https://hunter-log.onrender.com/api/map')
       .then(res => setChapters(res.data))
       .catch(err => console.error(err));
-  };
+  }, []);
 
-  const handleStatusChange = async (chapterId, newStatus) => {
+  const handleStatus = async (id, newStatus) => {
     try {
-      // 1. Call API
-      const res = await axios.put(`https://hunter-log.onrender.com/api/map/${chapterId}/status`, {
-        status: newStatus
-      });
-
-      // 2. IMMEDIATE UI UPDATE
-      // We map through chapters and update the specific one we changed
+      // 1. API Call
+      await axios.put(`https://hunter-log.onrender.com/api/map/${id}/status`, { status: newStatus });
+      
+      // 2. UI Update
       setChapters(prev => prev.map(ch => 
-        ch._id === chapterId ? { ...ch, status: newStatus } : ch
+        ch._id === id ? { ...ch, status: newStatus } : ch
       ));
-
     } catch (error) {
-      console.error("Map Update Error:", error);
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'active': return '#00bfff';
-      case 'completed': return '#00ff7f';
-      default: return '#555';
+      console.error("Map update failed", error);
     }
   };
 
   return (
-    <SystemWindow title="[ SYSTEM ROADMAP ]">
-      <div style={styles.container}>
-        {chapters.map((chapter) => (
-          <motion.div
-            key={chapter._id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            style={{
-              ...styles.chapterCard,
-              ...(chapter.status === 'active' ? styles.activeCard : {}),
-              ...(chapter.status === 'completed' ? styles.completedCard : {})
-            }}
-          >
-            <span style={{...styles.status, color: getStatusColor(chapter.status)}}>
-              [{chapter.status}]
+    <div style={styles.container}>
+      {chapters.map(ch => (
+        <motion.div
+          key={ch._id}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{
+            ...styles.chapterCard,
+            ...(ch.status === 'active' ? styles.activeCard : {}),
+            ...(ch.status === 'completed' ? styles.completedCard : {})
+          }}
+        >
+          <div style={styles.header}>
+            <span style={styles.title}>CH.{ch.chapter} : {ch.title}</span>
+            <span style={{
+              ...styles.status,
+              color: ch.status === 'active' ? theme.active : ch.status === 'completed' ? theme.completed : theme.locked
+            }}>
+              [{ch.status}]
             </span>
-            <div style={styles.title}>
-              CH.{chapter.chapter} : {chapter.title}
-            </div>
-            <div style={styles.desc}>{chapter.description}</div>
+          </div>
+          
+          <div style={styles.desc}>{ch.description}</div>
 
-            {/* Controls for Manual Progression */}
-            <div style={{display: 'flex', gap: '10px', marginTop: '10px'}}>
-              {chapter.status !== 'active' && (
-                <motion.button 
-                  style={styles.button}
-                  whileHover={{ scale: 1.1, backgroundColor: 'rgba(0,191,255,0.2)' }}
-                  onClick={() => handleStatusChange(chapter._id, 'active')}
-                >
-                  SET ACTIVE
-                </motion.button>
-              )}
-              
-              {chapter.status !== 'completed' && (
-                <motion.button 
-                  style={{...styles.button, borderColor: '#00ff7f', color: '#00ff7f'}}
-                  whileHover={{ scale: 1.1, backgroundColor: 'rgba(0,255,127,0.2)' }}
-                  onClick={() => handleStatusChange(chapter._id, 'completed')}
-                >
-                  COMPLETE
-                </motion.button>
-              )}
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    </SystemWindow>
+          <div style={styles.controls}>
+            {ch.status !== 'active' && (
+              <motion.button 
+                style={{...styles.btn, ...styles.activeBtn}}
+                whileHover={{ scale: 1.05, backgroundColor: 'rgba(0,191,255,0.1)' }}
+                onClick={() => handleStatus(ch._id, 'active')}
+              >
+                SET ACTIVE
+              </motion.button>
+            )}
+            {ch.status !== 'completed' && (
+              <motion.button 
+                style={{...styles.btn, ...styles.completeBtn}}
+                whileHover={{ scale: 1.05, backgroundColor: 'rgba(0,255,127,0.1)' }}
+                onClick={() => handleStatus(ch._id, 'completed')}
+              >
+                COMPLETE
+              </motion.button>
+            )}
+          </div>
+        </motion.div>
+      ))}
+    </div>
   );
 };
 
