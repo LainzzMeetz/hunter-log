@@ -27,8 +27,7 @@ const formatTrackName = (track) => {
 };
 
 function DailyQuests({ player, setPlayer, quests: initialQuests }) {
-  // We use local state for immediate UI feedback, 
-  // but we sync with props when they change.
+  // Use local state for optimistic updates
   const [quests, setQuests] = useState(initialQuests || []);
 
   useEffect(() => {
@@ -41,20 +40,14 @@ function DailyQuests({ player, setPlayer, quests: initialQuests }) {
       const res = await axios.put(
         `https://hunter-log.onrender.com/api/quests/${questId}/subtask/${subTaskTitle}`
       );
-      
-      // Update global player state
       setPlayer(res.data);
-      
-      // Update local quest state immediately to show checkmark
-      // (Optimistic update pattern can be added here, 
-      // but for now we rely on the parent refreshing the list)
-      
     } catch (error) {
       console.error("Error toggling sub-task:", error);
     }
   };
 
   const handleCompleteQuest = async (questId) => {
+    playSound('/audio/quest_complete.mp3');
     try {
       const res = await axios.put(
         `https://hunter-log.onrender.com/api/quests/${questId}/complete`
@@ -70,10 +63,7 @@ function DailyQuests({ player, setPlayer, quests: initialQuests }) {
     playSound('/audio/click.mp3');
     try {
       await axios.post('https://hunter-log.onrender.com/api/dailies/new-day');
-      // Trigger a refresh by calling setPlayer with current player
-      // This is a hacky way to force a refresh, ideal is to have a refreshQuests prop
-      // But for now, the App.js logic will handle the refresh on next cycle
-      window.location.reload(); // Hard refresh to ensure clean state
+      window.location.reload(); 
     } catch (error) {
       console.error("Error starting new day:", error);
     }
@@ -146,14 +136,34 @@ function DailyQuests({ player, setPlayer, quests: initialQuests }) {
               )}
             </div>
 
+            {/* CASE 1: Checklist Quests (e.g., Morning Routine) */}
             {quest.sub_tasks.length > 0 && (
               <SubTaskChecklist quest={quest} />
             )}
             
+            {/* CASE 2: Timer Quests (e.g., Workout) */}
             {quest.duration_minutes > 0 && !quest.completed && (
               <div style={{marginTop: '15px'}}>
                 <Timer quest={quest} onComplete={handleCompleteQuest} />
               </div>
+            )}
+            
+            {/* CASE 3 (NEW): Manual Completion (e.g., Study/Skill) */}
+            {quest.duration_minutes === 0 && quest.sub_tasks.length === 0 && !quest.completed && (
+               <motion.button
+                 style={{...styles.button, marginTop: '15px', backgroundColor: styles.title.color, color: '#000', fontWeight: 'bold'}}
+                 onClick={() => handleCompleteQuest(quest._id)}
+                 whileHover={{ scale: 1.05 }}
+                 whileTap={{ scale: 0.95 }}
+               >
+                 MARK COMPLETE
+               </motion.button>
+            )}
+            
+            {quest.completed && quest.duration_minutes === 0 && quest.sub_tasks.length === 0 && (
+               <div style={{ marginTop: '10px', color: '#00ff7f', fontWeight: 'bold' }}>
+                   COMPLETED
+               </div>
             )}
             
           </motion.div>
