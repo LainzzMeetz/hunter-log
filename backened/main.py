@@ -21,129 +21,118 @@ class Settings(BaseSettings):
 settings = Settings()
 app = FastAPI()
 
-# --- Seeder Logic (The Stat-Link Patch) ---
+# --- SYSTEM PROTOCOL SEEDER (REALISTIC MODE) ---
 async def seed_database_logic():
-    print("DATABASE SEEDING INITIATED...")
+    print("INITIALIZING SYSTEM PROTOCOL...")
     
-    # Clear old data
     await Player.delete_all(); await Quest.delete_all(); await Skill.delete_all()
     await Achievement.delete_all(); await HealthMetric.delete_all(); await InventoryItem.delete_all()
     await MapChapter.delete_all(); await Boss.delete_all(); await JournalEntry.delete_all()
-    print("Old data cleared.")
+    print("Memory Wiped.")
 
     # --- Player ---
     player = Player(
-        username="Laingam",
-        level=1, exp=0, stats=Stats(),
+        username="Player",
+        level=1, 
+        exp=0, 
+        exp_to_next_level=300, # Hell Mode requirement
+        stats=Stats(),
         conditions=[
-            Condition(name="Awakening", type="buff", description="The System is live."),
+            Condition(name="System Link", type="buff", description="Interface Active."),
         ],
         active_skill_track="software_dev_skill"
     )
     await player.insert()
 
-    # --- 1. WILLPOWER QUEST ---
+    # --- 1. MORNING PROTOCOL ---
     await Quest(
-        title="Morning Discipline", 
-        description="Win the morning, win the day.", 
+        title="[SYSTEM BOOT]", 
+        description="Initialize wake-up sequence. Cold exposure required for nervous system activation.", 
         type="daily",
-        exp_grant=15, rank="D", 
+        exp_grant=10, rank="E", 
         stat_reward="willpower", stat_points=1,
         sub_tasks=[ 
-            SubTask(title="Wake at 7:00 AM"), 
-            SubTask(title="Make Bed"), 
-            SubTask(title="Cold Shower / Face Wash") 
+            SubTask(title="Wake: 0700 Hours"), 
+            SubTask(title="Hydrate: 500ml"), 
+            SubTask(title="Cold Exposure (Shower)") 
         ]
     ).insert()
     
-    # --- 2. FOCUS QUEST ---
+    # --- 2. FOCUS PROTOCOL ---
     await Quest(
-        title="Deep Work / Meditate", 
-        description="10 min of pure focus. No phone.", 
+        title="[NEURAL CALIBRATION]", 
+        description="Eliminate external noise. Focus is absolute.", 
         type="daily",
-        exp_grant=15, rank="D", 
+        exp_grant=10, rank="E", 
         stat_reward="focus", stat_points=1,
-        duration_minutes=10
+        duration_minutes=15
     ).insert()
     
-    # --- 3. STRENGTH QUEST ---
+    # --- 3. STRENGTH PROTOCOL ---
     await Quest(
-        title="Strength Training", 
-        description="Push-ups, weights, or calisthenics.", 
-        type="daily",
-        exp_grant=30, rank="C", 
-        stat_reward="strength", stat_points=1,
-        duration_minutes=20
-    ).insert()
-
-    # --- 4. STAMINA QUEST (NEW) ---
-    await Quest(
-        title="Cardio / Endurance", 
-        description="Run, jog, or fast walk.", 
-        type="daily",
-        exp_grant=30, rank="C", 
-        stat_reward="stamina", stat_points=1,
-        duration_minutes=20
-    ).insert()
-
-    # --- 5. VITALITY QUEST (NEW) ---
-    await Quest(
-        title="Health & Recovery", 
-        description="Sleep 7h+ and eat 1 clean meal.", 
+        title="[PHYSICAL REINFORCEMENT]", 
+        description="Maintain structural integrity. Muscle atrophy is unacceptable.", 
         type="daily",
         exp_grant=20, rank="D", 
+        stat_reward="strength", stat_points=1,
+        duration_minutes=30
+    ).insert()
+
+    # --- 4. STAMINA PROTOCOL ---
+    await Quest(
+        title="[CARDIOVASCULAR STRESS]", 
+        description="Increase VO2 Max. Escape velocity required.", 
+        type="daily",
+        exp_grant=20, rank="D", 
+        stat_reward="stamina", stat_points=1,
+        duration_minutes=25
+    ).insert()
+
+    # --- 5. RECOVERY PROTOCOL ---
+    await Quest(
+        title="[REGENERATION CYCLE]", 
+        description="Repair tissue damage. Refuel biomass.", 
+        type="daily",
+        exp_grant=10, rank="E", 
         stat_reward="vitality", stat_points=1,
         sub_tasks=[ 
-            SubTask(title="Sleep 7+ Hours"), 
-            SubTask(title="Eat Healthy Meal"),
-            SubTask(title="No Sugar") 
+            SubTask(title="Sleep: 7+ Hours"), 
+            SubTask(title="Nutrient Intake (Clean)"),
+            SubTask(title="No Toxic Agents (Sugar)") 
         ]
     ).insert()
 
-    # --- 6. CLARITY QUEST (NEW) ---
+    # --- 6. INTELLIGENCE PROTOCOL ---
     await Quest(
-        title="Mental Clarity", 
-        description="Plan your day or journal.", 
+        title="[DATA UPLOAD]", 
+        description="Acquire technical knowledge. The brain is a weapon.", 
         type="daily",
-        exp_grant=15, rank="D", 
-        stat_reward="clarity", stat_points=1,
-        sub_tasks=[ 
-            SubTask(title="Update Logbook"), 
-            SubTask(title="Plan Tomorrow") 
-        ]
+        exp_grant=30, rank="C", 
+        stat_reward="study", stat_points=2, 
+        duration_minutes=0 # Manual Complete
     ).insert()
 
-    # --- 7. CONFIDENCE QUEST (NEW) ---
+    # --- 7. SOCIAL PROTOCOL ---
     await Quest(
-        title="Grooming & Self-Care", 
-        description="Look sharp to feel sharp.", 
+        title="[SOCIAL STEALTH]", 
+        description="Maintain human disguise. Optimize appearance.", 
         type="daily",
-        exp_grant=15, rank="D", 
+        exp_grant=10, rank="E", 
         stat_reward="confidence", stat_points=1,
         sub_tasks=[ 
-            SubTask(title="Skin Care / Grooming"), 
-            SubTask(title="Dress Well") 
+            SubTask(title="Hygiene Protocol"), 
+            SubTask(title="Attire Check") 
         ]
     ).insert()
-    
-    # --- INTELLIGENCE / SKILL QUEST ---
-    await Quest(
-        title="Study / Skill Practice", 
-        description="Log your study session.", 
-        type="daily",
-        exp_grant=50, rank="B", 
-        stat_reward="study", stat_points=2, # Grants point to active track
-        duration_minutes=0 # No timer, manual complete
-    ).insert()
 
-    # --- MAIN QUEST ---
+    # --- MAIN OBJECTIVE ---
     await Quest(
-        title="Reawakening", description="Complete all dailies for 3 days in a row.", type="main",
-        exp_grant=500, rank="A"
+        title="SURVIVAL", description="Complete [DATA UPLOAD] for 7 consecutive cycles.", type="main",
+        exp_grant=500, rank="A" 
     ).insert()
     
-    print("--- DATABASE SEEDING COMPLETE ---")
-    return {"message": "System reset. All Stats now have linked Quests."}
+    print("--- SYSTEM READY ---")
+    return {"message": "System Protocol Initiated. Hell Mode Active."}
 
 
 @app.on_event("startup")
@@ -159,7 +148,7 @@ async def on_startup():
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 async def get_player_instance():
-    player = await Player.find_one(Player.username == "Laingam")
+    player = await Player.find_one(Player.username == "Player")
     if not player: raise HTTPException(status_code=404, detail="Player not found.")
     return player
 
@@ -180,17 +169,40 @@ async def set_active_track(data: dict = Body(...)):
     if not hasattr(player.stats, track_name): raise HTTPException(status_code=400, detail="Invalid skill track name.")
     player.active_skill_track = track_name; await player.save(); return player
 
+# --- LEVEL & PENALTY LOGIC ---
+def calculate_level_up(player, exp_change):
+    # Add (or subtract) EXP
+    player.exp += exp_change
+    
+    # Handle Level Up
+    while player.exp >= player.exp_to_next_level:
+        player.level += 1
+        player.exp -= player.exp_to_next_level
+        player.exp_to_next_level = int(player.exp_to_next_level * 1.5) # 50% harder each level
+    
+    # Handle Level Down (Penalty Logic)
+    if player.exp < 0:
+        if player.level > 1:
+            player.level -= 1
+            # Revert max exp for previous level
+            player.exp_to_next_level = int(player.exp_to_next_level / 1.5)
+            player.exp = player.exp_to_next_level + player.exp # Wrap around
+        else:
+            player.exp = 0 # Cannot go below Level 1, 0 EXP
+            
+    return player
+
 @app.put("/api/quests/{quest_id}/achieve", response_model=Player)
 async def achieve_main_quest(quest_id: PydanticObjectId):
     quest = await Quest.get(quest_id);
     if not quest or quest.completed: return await get_player_instance()
     if quest.type == "daily": raise HTTPException(status_code=400, detail="Cannot manually achieve a Daily Quest.")
+    
     quest.completed = True; await quest.save(); player = await get_player_instance()
     if quest.stat_reward and quest.stat_points > 0:
         current_stat_val = getattr(player.stats, quest.stat_reward, 1); setattr(player.stats, quest.stat_reward, current_stat_val + quest.stat_points)
-    player.exp += quest.exp_grant; player.awakening_gauge = min(player.awakening_gauge + (quest.exp_grant // 2), 100); leveled_up = False
-    while player.exp >= player.exp_to_next_level:
-        player.level += 1; player.exp -= player.exp_to_next_level; player.exp_to_next_level = int(player.exp_to_next_level * 1.15); leveled_up = True
+    
+    player = calculate_level_up(player, quest.exp_grant)
     await player.save(); return player
 
 @app.get("/api/quests", response_model=List[Quest])
@@ -220,9 +232,7 @@ async def toggle_sub_task(quest_id: PydanticObjectId, sub_task_title: str):
         quest.completed = True; await quest.save(); player = await get_player_instance()
         if quest.stat_reward and quest.stat_points > 0:
             current_stat_val = getattr(player.stats, quest.stat_reward, 1); setattr(player.stats, quest.stat_reward, current_stat_val + quest.stat_points)
-        player.exp += quest.exp_grant; player.awakening_gauge = min(player.awakening_gauge + (quest.exp_grant // 2), 100); leveled_up = False
-        while player.exp >= player.exp_to_next_level:
-            player.level += 1; player.exp -= player.exp_to_next_level; player.exp_to_next_level = int(player.exp_to_next_level * 1.15); leveled_up = True
+        player = calculate_level_up(player, quest.exp_grant)
         await player.save(); return player
     else:
         await quest.save(); return await get_player_instance()
@@ -239,22 +249,40 @@ async def complete_quest(quest_id: PydanticObjectId):
         track = player.active_skill_track; current_stat_val = getattr(player.stats, track, 1); setattr(player.stats, track, current_stat_val + quest.stat_points)
     elif quest.stat_reward and quest.stat_points > 0:
         current_stat_val = getattr(player.stats, quest.stat_reward, 1); setattr(player.stats, quest.stat_reward, current_stat_val + quest.stat_points)
-    player.exp += quest.exp_grant; player.awakening_gauge = min(player.awakening_gauge + (quest.exp_grant // 2), 100); leveled_up = False
-    while player.exp >= player.exp_to_next_level:
-        player.level += 1; player.exp -= player.exp_to_next_level; player.exp_to_next_level = int(player.exp_to_next_level * 1.15); leveled_up = True
+    
+    player = calculate_level_up(player, quest.exp_grant)
     await player.save(); return player
 
-# --- NEW DAY ENDPOINT ---
+# --- NEW DAY ENDPOINT (WITH PENALTY LOGIC) ---
 @app.post("/api/dailies/new-day")
 async def start_new_day():
     daily_quests = await Quest.find(Quest.type == "daily").to_list()
+    player = await get_player_instance()
+    
+    missed_count = 0
+    penalty_per_miss = 5 # Lose 5 EXP per missed quest
+    
     for quest in daily_quests:
+        # Check if missed
+        if not quest.completed:
+            missed_count += 1
+            
+        # Reset for new day
         quest.completed = False
         if quest.sub_tasks:
             for task in quest.sub_tasks:
                 task.completed = False
         await quest.save()
-    return {"message": "A new day has begun."}
+        
+    # Apply Penalty
+    if missed_count > 0:
+        total_penalty = missed_count * penalty_per_miss
+        # We pass negative EXP to our calculator
+        player = calculate_level_up(player, -total_penalty) 
+        await player.save()
+        return {"message": f"Day Reset. Failure detected: {missed_count} protocols missed. Penalty: -{total_penalty} EXP."}
+        
+    return {"message": "Day Reset. All protocols satisfied."}
 
 # --- Data Endpoints ---
 @app.get("/api/journal", response_model=List[JournalEntry])
