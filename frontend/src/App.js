@@ -5,23 +5,21 @@ import axios from 'axios';
 
 // --- COMPONENTS ---
 import StatsPage from './pages/StatsPage';
-import DailyQuests from './components/DailyQuests'; // Reusing your DailyQuests component
+import DailyQuests from './components/DailyQuests';
 import BossesPage from './pages/BossesPage';
 import MapPage from './pages/MapPage';
 import SkillsPage from './pages/SkillsPage';
 
-// --- THE TACTICAL THEME ---
+// --- THEME ---
 const theme = {
-  bg: '#050505', // Void Black
-  panel: 'rgba(15, 15, 20, 0.85)', // Glass
-  primary: '#00bfff', // Cyan
-  success: '#00ff7f', // Green
-  danger: '#ff4444', // Red
-  text: '#e0e0e0', // Off-white
+  bg: '#050505',
+  primary: '#00bfff',
+  success: '#00ff7f',
+  danger: '#ff4444',
+  text: '#e0e0e0',
   font: '"Share Tech Mono", monospace',
 };
 
-// --- STYLES ---
 const styles = {
   appContainer: {
     minHeight: '100vh',
@@ -35,7 +33,7 @@ const styles = {
   contentArea: {
     flex: 1,
     padding: '20px',
-    paddingBottom: '80px', // Space for bottom nav
+    paddingBottom: '80px',
     overflowY: 'auto',
     maxWidth: '600px',
     margin: '0 auto',
@@ -78,43 +76,35 @@ const styles = {
   }
 };
 
-// --- DYNAMIC CLASS EVOLUTION LOGIC ---
-const getEvolvedClassName = (track, level) => {
-  let baseTitle = "NOVICE";
-  let midTitle = "ADVENTURER";
-  let eliteTitle = "EXPERT";
-  let masterTitle = "MASTER";
-
-  // 1. Define Titles per Track
-  if (track === 'software_dev_skill') {
-    midTitle = "SHADOW DEV"; eliteTitle = "ARCHITECT"; masterTitle = "CODE MONARCH";
-  } else if (track === 'ai_ml_skill') {
-    midTitle = "DATA HUNTER"; eliteTitle = "AI ARCHITECT"; masterTitle = "SINGULARITY";
-  } else if (track === 'embedded_skill') {
-    midTitle = "IRON CODER"; eliteTitle = "SYSTEM ENGR"; masterTitle = "MACHINE GOD";
-  } else if (track === 'cybersecurity') {
-    midTitle = "GATEKEEPER"; eliteTitle = "NETRUNNER"; masterTitle = "VOID WALKER";
-  }
-
-  // 2. Determine Rank based on Level
-  if (level < 10) return `NOVICE`; // Lvl 1-9
-  if (level < 30) return midTitle; // Lvl 10-29
-  if (level < 50) return eliteTitle; // Lvl 30-49
-  return masterTitle; // Lvl 50+
+// --- SOUND UTILITY ---
+export const playSound = (type) => {
+  const file = type === 'complete' ? '/audio/quest_complete.mp3' : '/audio/click.mp3';
+  const audio = new Audio(file);
+  audio.volume = 0.5;
+  audio.play().catch(e => console.warn("Sound play failed (Check /public/audio folder):", e));
 };
 
-// --- MAIN APP COMPONENT ---
+// --- FORMAT CLASS NAME (Standard Professional Names) ---
+const formatClassTitle = (track) => {
+  if (!track) return "NOVICE";
+  switch (track) {
+    case 'software_dev_skill': return 'SOFTWARE ENGINEER';
+    case 'ai_ml_skill': return 'AI RESEARCHER';
+    case 'embedded_skill': return 'EMBEDDED ENGINEER';
+    case 'cybersecurity': return 'CYBER ANALYST';
+    default: return track.replace(/_/g, ' ').toUpperCase();
+  }
+};
+
 function App() {
   const [activeTab, setActiveTab] = useState('STATUS');
   const [player, setPlayer] = useState(null);
   const [quests, setQuests] = useState([]);
 
-  // Data Fetching
   const fetchAllData = useCallback(() => {
     axios.get('https://hunter-log.onrender.com/api/player')
       .then(res => setPlayer(res.data))
       .catch(err => console.error(err));
-      
     axios.get('https://hunter-log.onrender.com/api/quests')
       .then(res => setQuests(res.data))
       .catch(err => console.error(err));
@@ -124,58 +114,56 @@ function App() {
     fetchAllData();
   }, [fetchAllData]);
 
-  // Update wrapper
   const updatePlayer = (newData) => {
     setPlayer(newData);
-    // Refresh quests if needed (e.g. after completing one)
-    axios.get('https://hunter-log.onrender.com/api/quests')
-      .then(res => setQuests(res.data));
+    axios.get('https://hunter-log.onrender.com/api/quests').then(res => setQuests(res.data));
   };
 
-  // --- RENDER TABS ---
+  const handleTabChange = (tab) => {
+    playSound('click');
+    setActiveTab(tab);
+  };
+
   const renderContent = () => {
     if (!player) return <div style={{textAlign:'center', marginTop: '50px'}}>SYSTEM LOADING...</div>;
 
-    // Calculate Evolved Class Name
-    const className = getEvolvedClassName(player.active_skill_track, player.level);
+    const classTitle = formatClassTitle(player.active_skill_track);
 
     switch (activeTab) {
       case 'STATUS':
         return (
           <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
-            {/* Custom Header for Status */}
             <div style={{marginBottom: '20px', borderBottom: `1px solid ${theme.primary}`, paddingBottom: '10px'}}>
-               <h1 style={{margin:0, fontSize: '24px', color: theme.primary}}>SYSTEM STATUS</h1>
+               <h1 style={{margin:0, fontSize: '24px', color: theme.primary}}>DASHBOARD</h1>
                <div style={{display:'flex', justifyContent:'space-between', color: '#888', fontSize:'12px'}}>
                   <span>ID: {player.username.toUpperCase()}</span>
-                  <span style={{color: theme.success}}>{className}</span>
+                  <span style={{color: theme.success}}>{classTitle}</span>
                </div>
             </div>
-            {/* Reusing your Stats Page but injecting the updated player */}
-            <StatsPage player={{...player, classNameOverride: className}} />
+            <StatsPage player={{...player}} />
           </motion.div>
         );
 
       case 'MISSIONS':
         return (
           <motion.div initial={{x: 20, opacity:0}} animate={{x: 0, opacity:1}} exit={{x: -20, opacity:0}}>
-            <h2 style={{color: theme.danger, borderBottom: `1px solid ${theme.danger}`}}>ACTIVE OPERATIONS</h2>
+            <h2 style={{color: theme.danger, borderBottom: `1px solid ${theme.danger}`, fontSize:'18px'}}>ACTIVE MISSIONS</h2>
             <DailyQuests player={player} setPlayer={updatePlayer} quests={quests} />
             
             <div style={{marginTop: '30px'}}>
-               <h3 style={{color: theme.danger, fontSize: '16px'}}>THREAT DETECTED</h3>
+               <h3 style={{color: theme.danger, fontSize: '16px'}}>BOSS / INTERVIEW LOG</h3>
                <BossesPage /> 
             </div>
           </motion.div>
         );
 
-      case 'EVOLUTION':
+      case 'PROGRESS':
         return (
           <motion.div initial={{x: -20, opacity:0}} animate={{x: 0, opacity:1}} exit={{x: 20, opacity:0}}>
-            <h2 style={{color: theme.primary, borderBottom: `1px solid ${theme.primary}`}}>EVOLUTION TREE</h2>
+            <h2 style={{color: theme.primary, borderBottom: `1px solid ${theme.primary}`, fontSize:'18px'}}>ROADMAP</h2>
             <MapPage />
             <div style={{marginTop: '30px'}}>
-               <h3 style={{color: theme.success, fontSize: '16px'}}>SKILL DATABASE</h3>
+               <h3 style={{color: theme.success, fontSize: '16px'}}>SKILLS ACQUIRED</h3>
                <SkillsPage player={player} setPlayer={setPlayer} />
             </div>
           </motion.div>
@@ -193,27 +181,15 @@ function App() {
         </AnimatePresence>
       </div>
 
-      {/* 3-TAB NAVIGATION DECK */}
       <div style={styles.navBar}>
-        <button 
-          style={{...styles.navButton, ...(activeTab === 'STATUS' ? styles.activeNav : {})}}
-          onClick={() => setActiveTab('STATUS')}
-        >
+        <button style={{...styles.navButton, ...(activeTab === 'STATUS' ? styles.activeNav : {})}} onClick={() => handleTabChange('STATUS')}>
           <span>◈</span> STATUS
         </button>
-        
-        <button 
-          style={{...styles.navButton, ...(activeTab === 'MISSIONS' ? styles.activeNav : {})}}
-          onClick={() => setActiveTab('MISSIONS')}
-        >
+        <button style={{...styles.navButton, ...(activeTab === 'MISSIONS' ? styles.activeNav : {})}} onClick={() => handleTabChange('MISSIONS')}>
           <span>⚔</span> MISSIONS
         </button>
-        
-        <button 
-          style={{...styles.navButton, ...(activeTab === 'EVOLUTION' ? styles.activeNav : {})}}
-          onClick={() => setActiveTab('EVOLUTION')}
-        >
-          <span>⟁</span> EVOLUTION
+        <button style={{...styles.navButton, ...(activeTab === 'PROGRESS' ? styles.activeNav : {})}} onClick={() => handleTabChange('PROGRESS')}>
+          <span>⟁</span> PROGRESS
         </button>
       </div>
     </div>
