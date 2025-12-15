@@ -76,24 +76,21 @@ const styles = {
   }
 };
 
-// --- SOUND UTILITY ---
 export const playSound = (type) => {
   const file = type === 'complete' ? '/audio/quest_complete.mp3' : '/audio/click.mp3';
   const audio = new Audio(file);
   audio.volume = 0.5;
-  audio.play().catch(e => console.warn("Sound play failed (Check /public/audio folder):", e));
+  audio.play().catch(e => console.warn("Audio missing:", e));
 };
 
-// --- FORMAT CLASS NAME (Standard Professional Names) ---
-const formatClassTitle = (track) => {
-  if (!track) return "NOVICE";
-  switch (track) {
-    case 'software_dev_skill': return 'SOFTWARE ENGINEER';
-    case 'ai_ml_skill': return 'AI RESEARCHER';
-    case 'embedded_skill': return 'EMBEDDED ENGINEER';
-    case 'cybersecurity': return 'CYBER ANALYST';
-    default: return track.replace(/_/g, ' ').toUpperCase();
-  }
+// --- HUNTER RANK LOGIC (Solo Leveling Style) ---
+const getHunterRank = (level) => {
+  if (level < 10) return "E-RANK";
+  if (level < 20) return "D-RANK";
+  if (level < 30) return "C-RANK";
+  if (level < 40) return "B-RANK";
+  if (level < 50) return "A-RANK";
+  return "S-RANK";
 };
 
 function App() {
@@ -127,7 +124,7 @@ function App() {
   const renderContent = () => {
     if (!player) return <div style={{textAlign:'center', marginTop: '50px'}}>SYSTEM LOADING...</div>;
 
-    const classTitle = formatClassTitle(player.active_skill_track);
+    const rank = getHunterRank(player.level);
 
     switch (activeTab) {
       case 'STATUS':
@@ -137,10 +134,10 @@ function App() {
                <h1 style={{margin:0, fontSize: '24px', color: theme.primary}}>DASHBOARD</h1>
                <div style={{display:'flex', justifyContent:'space-between', color: '#888', fontSize:'12px'}}>
                   <span>ID: {player.username.toUpperCase()}</span>
-                  <span style={{color: theme.success}}>{classTitle}</span>
+                  <span style={{color: theme.success, fontWeight: 'bold'}}>{rank}</span>
                </div>
             </div>
-            <StatsPage player={{...player}} />
+            <StatsPage player={player} />
           </motion.div>
         );
 
