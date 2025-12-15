@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
+import { playSound } from '../App';
 
 const theme = {
   active: '#00bfff', // Cyan
@@ -16,6 +17,22 @@ const styles = {
     flexDirection: 'column',
     gap: '20px',
     paddingBottom: '20px'
+  },
+  addSection: {
+    marginBottom: '20px',
+    border: '1px dashed #333',
+    padding: '15px',
+    borderRadius: '5px'
+  },
+  input: {
+    backgroundColor: 'rgba(0,0,0,0.5)', 
+    border: '1px solid #555', 
+    color: '#fff', 
+    padding: '10px', 
+    width: '100%', 
+    marginBottom: '10px', 
+    fontFamily: theme.font,
+    boxSizing: 'border-box'
   },
   chapterCard: {
     borderLeft: `4px solid ${theme.locked}`,
@@ -78,11 +95,25 @@ const styles = {
   completeBtn: {
     borderColor: theme.completed,
     color: theme.completed,
+  },
+  mainBtn: {
+    backgroundColor: theme.active,
+    color: '#000',
+    border: 'none',
+    padding: '8px 15px',
+    fontWeight: 'bold',
+    fontFamily: theme.font,
+    cursor: 'pointer',
+    width: '100%',
+    textTransform: 'uppercase'
   }
 };
 
 const MapPage = () => {
   const [chapters, setChapters] = useState([]);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newDesc, setNewDesc] = useState("");
 
   useEffect(() => {
     axios.get('https://hunter-log.onrender.com/api/map')
@@ -92,10 +123,9 @@ const MapPage = () => {
 
   const handleStatus = async (id, newStatus) => {
     try {
-      // 1. API Call
+      playSound('click');
       await axios.put(`https://hunter-log.onrender.com/api/map/${id}/status`, { status: newStatus });
       
-      // 2. UI Update
       setChapters(prev => prev.map(ch => 
         ch._id === id ? { ...ch, status: newStatus } : ch
       ));
@@ -104,8 +134,68 @@ const MapPage = () => {
     }
   };
 
+  const handleAddChapter = async () => {
+    if (!newTitle || !newDesc) return;
+    try {
+      playSound('complete');
+      const res = await axios.post('https://hunter-log.onrender.com/api/map', {
+        title: newTitle,
+        description: newDesc
+      });
+      // Add new chapter to list
+      setChapters([...chapters, res.data]);
+      // Reset form
+      setNewTitle("");
+      setNewDesc("");
+      setShowAdd(false);
+    } catch (error) {
+      console.error("Failed to add chapter", error);
+    }
+  };
+
   return (
     <div style={styles.container}>
+      
+      {/* 1. ADD CHAPTER TOGGLE */}
+      {!showAdd ? (
+        <button 
+          onClick={() => setShowAdd(true)} 
+          style={{...styles.btn, border: '1px dashed #555', width: '100%', padding: '10px'}}
+        >
+          [ + NEW OPERATION ]
+        </button>
+      ) : (
+        <motion.div 
+          style={styles.addSection}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div style={{color: theme.active, marginBottom: '10px', fontWeight:'bold'}}>DEFINE NEW OPERATION</div>
+          <input 
+            style={styles.input} 
+            placeholder="OPERATION NAME (e.g. The Job Hunt)"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+          />
+          <textarea 
+            style={{...styles.input, height: '80px', resize: 'none'}} 
+            placeholder="MISSION OBJECTIVE..."
+            value={newDesc}
+            onChange={(e) => setNewDesc(e.target.value)}
+          />
+          <div style={{display: 'flex', gap: '10px'}}>
+             <button style={styles.mainBtn} onClick={handleAddChapter}>INITIALIZE</button>
+             <button 
+               style={{...styles.mainBtn, backgroundColor: '#333', color: '#fff'}} 
+               onClick={() => setShowAdd(false)}
+             >
+               CANCEL
+             </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* 2. CHAPTER LIST */}
       {chapters.map(ch => (
         <motion.div
           key={ch._id}
