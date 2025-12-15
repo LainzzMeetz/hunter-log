@@ -5,29 +5,9 @@ import { motion } from 'framer-motion';
 import SystemWindow from './SystemWindow';
 import { styles } from './styles';
 import Timer from './Timer';
-
-const playSound = (src) => {
-  try {
-    const sound = new Audio(src);
-    sound.currentTime = 0;
-    sound.play().catch(e => console.warn("Audio play failed:", e));
-  } catch (e) {
-    console.warn("Audio error", e);
-  }
-};
-
-const formatTrackName = (track) => {
-  switch (track) {
-    case 'embedded_skill': return 'EMBEDDED';
-    case 'ai_ml_skill': return 'AI/ML';
-    case 'software_dev_skill': return 'SOFTWARE DEV';
-    case 'quantum_computing': return 'QUANTUM';
-    default: return track.toUpperCase();
-  }
-};
+import { playSound } from '../App';
 
 function DailyQuests({ player, setPlayer, quests: initialQuests }) {
-  // Use local state for optimistic updates
   const [quests, setQuests] = useState(initialQuests || []);
 
   useEffect(() => {
@@ -35,38 +15,38 @@ function DailyQuests({ player, setPlayer, quests: initialQuests }) {
   }, [initialQuests]);
 
   const handleToggleSubtask = async (questId, subTaskTitle) => {
-    playSound('/audio/click.mp3');
+    playSound('click');
     try {
-      const res = await axios.put(
-        `https://hunter-log.onrender.com/api/quests/${questId}/subtask/${subTaskTitle}`
-      );
+      const res = await axios.put(`https://hunter-log.onrender.com/api/quests/${questId}/subtask/${subTaskTitle}`);
       setPlayer(res.data);
-    } catch (error) {
-      console.error("Error toggling sub-task:", error);
-    }
+    } catch (error) { console.error(error); }
   };
 
   const handleCompleteQuest = async (questId) => {
-    playSound('/audio/quest_complete.mp3');
+    playSound('complete');
     try {
-      const res = await axios.put(
-        `https://hunter-log.onrender.com/api/quests/${questId}/complete`
-      );
+      const res = await axios.put(`https://hunter-log.onrender.com/api/quests/${questId}/complete`);
       setPlayer(res.data);
-    } catch (error) {
-      console.error("Error completing quest:", error);
-    }
+    } catch (error) { console.error(error); }
   };
 
   const handleNewDay = async () => {
-    if (!window.confirm("Start a New Day? This will reset your Daily Quests.")) return;
-    playSound('/audio/click.mp3');
+    if (!window.confirm("Start a New Day? (Resets checkmarks)")) return;
+    playSound('click');
     try {
       await axios.post('https://hunter-log.onrender.com/api/dailies/new-day');
       window.location.reload(); 
-    } catch (error) {
-      console.error("Error starting new day:", error);
-    }
+    } catch (error) { console.error(error); }
+  };
+
+  // Helper to format the track name for display
+  const formatTrackName = (track) => {
+    if(!track) return "GENERAL";
+    if(track === 'software_dev_skill') return "SOFTWARE DEV";
+    if(track === 'ai_ml_skill') return "AI / ML";
+    if(track === 'embedded_skill') return "EMBEDDED";
+    if(track === 'quantum_computing') return "QUANTUM";
+    return track.toUpperCase();
   };
 
   const SubTaskChecklist = ({ quest }) => (
@@ -77,16 +57,16 @@ function DailyQuests({ player, setPlayer, quests: initialQuests }) {
           style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '5px' }}
           onClick={() => handleToggleSubtask(quest._id, task.title)}
         >
-          <input 
-            type="checkbox" 
-            checked={task.completed} 
-            readOnly 
-            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-          />
+          <div style={{
+            width: '16px', height: '16px', border: '1px solid #555',
+            backgroundColor: task.completed ? '#00ff7f' : 'transparent',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            {task.completed && <div style={{width:'8px', height:'8px', backgroundColor:'#000'}} />}
+          </div>
           <span style={{
-            ...styles.font,
-            fontSize: '16px',
-            color: task.completed ? '#888' : '#fff',
+            fontFamily: '"Share Tech Mono", monospace', fontSize: '14px',
+            color: task.completed ? '#666' : '#ccc',
             textDecoration: task.completed ? 'line-through' : 'none'
           }}>
             {task.title}
@@ -97,61 +77,47 @@ function DailyQuests({ player, setPlayer, quests: initialQuests }) {
   );
 
   return (
-    <SystemWindow>
-      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
-        <h2 style={{...styles.title, marginBottom: 0, borderBottom: 'none'}}>Daily Quests</h2>
-        
-        <motion.button
-          style={{...styles.button, fontSize: '12px', padding: '5px 10px', backgroundColor: 'rgba(0, 255, 127, 0.1)', color: '#00ff7f', borderColor: '#00ff7f'}}
-          whileHover={{ scale: 1.05, backgroundColor: '#00ff7f', color: '#000' }}
-          onClick={handleNewDay}
-        >
-          [ START NEW DAY ]
-        </motion.button>
-      </div>
+    <div style={{backgroundColor: 'rgba(20,20,20,0.5)', padding:'15px', border:'1px solid #333', borderRadius:'5px'}}>
+      
+      {quests.map(quest => {
+        // DYNAMIC TITLE LOGIC:
+        let displayTitle = quest.title;
+        if (quest.stat_reward === 'study' && player) {
+             displayTitle = `[ STUDY: ${formatTrackName(player.active_skill_track)} ]`;
+        }
 
-      <div>
-        {quests.map(quest => (
+        return (
           <motion.div 
             key={quest._id} 
-            style={{...styles.item, 
-              ...(quest.completed ? styles.itemCompleted : {}),
-              flexDirection: 'column',
-              alignItems: 'flex-start'
+            style={{
+              padding: '15px', borderBottom: '1px solid #333', marginBottom: '10px',
+              backgroundColor: quest.completed ? 'rgba(0, 255, 127, 0.05)' : 'transparent'
             }}
             layout
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-              <span>{quest.title}</span>
-              
-              {quest.stat_reward && (
-                <span style={{...styles.font, color: styles.title.color}}>
-                  +{quest.exp_grant} EXP | +{quest.stat_points} 
-                  {quest.stat_reward === 'study' && player ? 
-                    formatTrackName(player.active_skill_track) 
-                    : 
-                    quest.stat_reward.toUpperCase()
-                  }
-                </span>
-              )}
+              <span style={{color: quest.completed ? '#00ff7f' : '#fff', fontWeight:'bold'}}>
+                {displayTitle}
+              </span>
+              <span style={{fontSize: '12px', color: '#888'}}>
+                {quest.exp_grant} EXP
+              </span>
             </div>
-
-            {/* CASE 1: Checklist Quests (e.g., Morning Routine) */}
-            {quest.sub_tasks.length > 0 && (
-              <SubTaskChecklist quest={quest} />
-            )}
             
-            {/* CASE 2: Timer Quests (e.g., Workout) */}
+            <div style={{fontSize:'12px', color:'#666', marginBottom:'10px'}}>{quest.description}</div>
+
+            {/* Checklist or Timer or Button */}
+            {quest.sub_tasks.length > 0 && <SubTaskChecklist quest={quest} />}
+            
             {quest.duration_minutes > 0 && !quest.completed && (
-              <div style={{marginTop: '15px'}}>
+              <div style={{marginTop: '10px'}}>
                 <Timer quest={quest} onComplete={handleCompleteQuest} />
               </div>
             )}
             
-            {/* CASE 3 (NEW): Manual Completion (e.g., Study/Skill) */}
             {quest.duration_minutes === 0 && quest.sub_tasks.length === 0 && !quest.completed && (
                <motion.button
-                 style={{...styles.button, marginTop: '15px', backgroundColor: styles.title.color, color: '#000', fontWeight: 'bold'}}
+                 style={{marginTop: '10px', backgroundColor: '#00bfff', color: '#000', border:'none', padding:'5px 15px', fontWeight:'bold', cursor:'pointer'}}
                  onClick={() => handleCompleteQuest(quest._id)}
                  whileHover={{ scale: 1.05 }}
                  whileTap={{ scale: 0.95 }}
@@ -159,17 +125,21 @@ function DailyQuests({ player, setPlayer, quests: initialQuests }) {
                  MARK COMPLETE
                </motion.button>
             )}
-            
-            {quest.completed && quest.duration_minutes === 0 && quest.sub_tasks.length === 0 && (
-               <div style={{ marginTop: '10px', color: '#00ff7f', fontWeight: 'bold' }}>
-                   COMPLETED
-               </div>
-            )}
-            
+
+            {quest.completed && <div style={{ marginTop: '5px', color: '#00ff7f', fontSize: '12px' }}>[ COMPLETED ]</div>}
           </motion.div>
-        ))}
+        );
+      })}
+
+      <div style={{marginTop: '20px', textAlign: 'center'}}>
+        <button 
+          onClick={handleNewDay}
+          style={{background: 'transparent', border: '1px solid #ff4444', color: '#ff4444', padding: '10px 20px', cursor: 'pointer', fontFamily: '"Share Tech Mono", monospace'}}
+        >
+          [ START NEW DAY ]
+        </button>
       </div>
-    </SystemWindow>
+    </div>
   );
 }
 
