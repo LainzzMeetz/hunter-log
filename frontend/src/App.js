@@ -3,140 +3,221 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import axios from 'axios';
 
-import Sidebar from './components/Sidebar';
+// --- COMPONENTS ---
 import StatsPage from './pages/StatsPage';
-import QuestsPage from './pages/QuestsPage';
-import SkillsPage from './pages/SkillsPage';
-import MapPage from './pages/MapPage';
-import InventoryPage from './pages/InventoryPage';
+import DailyQuests from './components/DailyQuests'; // Reusing your DailyQuests component
 import BossesPage from './pages/BossesPage';
-import LogbookPage from './pages/LogbookPage';
+import MapPage from './pages/MapPage';
+import SkillsPage from './pages/SkillsPage';
 
+// --- THE TACTICAL THEME ---
+const theme = {
+  bg: '#050505', // Void Black
+  panel: 'rgba(15, 15, 20, 0.85)', // Glass
+  primary: '#00bfff', // Cyan
+  success: '#00ff7f', // Green
+  danger: '#ff4444', // Red
+  text: '#e0e0e0', // Off-white
+  font: '"Share Tech Mono", monospace',
+};
+
+// --- STYLES ---
 const styles = {
-  pageContainer: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-    padding: '10px 5px', // <-- ORIGINAL PADDING (No "Safe Zone")
+  appContainer: {
     minHeight: '100vh',
+    backgroundColor: theme.bg,
+    color: theme.text,
+    fontFamily: theme.font,
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+  },
+  contentArea: {
+    flex: 1,
+    padding: '20px',
+    paddingBottom: '80px', // Space for bottom nav
+    overflowY: 'auto',
+    maxWidth: '600px',
+    margin: '0 auto',
     width: '100%',
+    boxSizing: 'border-box',
+  },
+  navBar: {
+    position: 'fixed',
+    bottom: 0,
+    left: 0,
+    width: '100%',
+    height: '70px',
+    backgroundColor: 'rgba(5, 5, 5, 0.95)',
+    borderTop: `1px solid ${theme.primary}`,
+    display: 'flex',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    zIndex: 1000,
+    backdropFilter: 'blur(10px)',
+  },
+  navButton: {
+    background: 'none',
+    border: 'none',
+    color: '#555',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    fontFamily: theme.font,
+    cursor: 'pointer',
+    padding: '10px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '5px',
+    textTransform: 'uppercase',
+    letterSpacing: '1px',
+  },
+  activeNav: {
+    color: theme.primary,
+    textShadow: `0 0 10px ${theme.primary}`,
   }
 };
 
-const windowVariants = {
-  initial: { opacity: 0, y: 50, scale: 0.9, },
-  in: { opacity: 1, y: 0, scale: 1, },
-  out: { opacity: 0, y: 50, scale: 0.9, }
+// --- DYNAMIC CLASS EVOLUTION LOGIC ---
+const getEvolvedClassName = (track, level) => {
+  let baseTitle = "NOVICE";
+  let midTitle = "ADVENTURER";
+  let eliteTitle = "EXPERT";
+  let masterTitle = "MASTER";
+
+  // 1. Define Titles per Track
+  if (track === 'software_dev_skill') {
+    midTitle = "SHADOW DEV"; eliteTitle = "ARCHITECT"; masterTitle = "CODE MONARCH";
+  } else if (track === 'ai_ml_skill') {
+    midTitle = "DATA HUNTER"; eliteTitle = "AI ARCHITECT"; masterTitle = "SINGULARITY";
+  } else if (track === 'embedded_skill') {
+    midTitle = "IRON CODER"; eliteTitle = "SYSTEM ENGR"; masterTitle = "MACHINE GOD";
+  } else if (track === 'cybersecurity') {
+    midTitle = "GATEKEEPER"; eliteTitle = "NETRUNNER"; masterTitle = "VOID WALKER";
+  }
+
+  // 2. Determine Rank based on Level
+  if (level < 10) return `NOVICE`; // Lvl 1-9
+  if (level < 30) return midTitle; // Lvl 10-29
+  if (level < 50) return eliteTitle; // Lvl 30-49
+  return masterTitle; // Lvl 50+
 };
 
-const pageTransition = { type: "tween", ease: "anticipate", duration: 0.4 };
-
+// --- MAIN APP COMPONENT ---
 function App() {
-  const [activeWindow, setActiveWindow] = useState('STATS');
+  const [activeTab, setActiveTab] = useState('STATUS');
   const [player, setPlayer] = useState(null);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  
-  // --- Master Quest List State ---
-  const [allQuests, setAllQuests] = useState([]);
+  const [quests, setQuests] = useState([]);
 
-  // This function is the *only* way to refresh all data
+  // Data Fetching
   const fetchAllData = useCallback(() => {
     axios.get('https://hunter-log.onrender.com/api/player')
       .then(res => setPlayer(res.data))
-      .catch(err => console.error("Error fetching player data:", err));
+      .catch(err => console.error(err));
       
     axios.get('https://hunter-log.onrender.com/api/quests')
-      .then(res => setAllQuests(res.data))
-      .catch(err => console.error("Error fetching quests:", err));
+      .then(res => setQuests(res.data))
+      .catch(err => console.error(err));
   }, []);
 
-  // Fetch all data *once* when the app loads
   useEffect(() => {
     fetchAllData();
   }, [fetchAllData]);
 
-  // This function will be passed down to all components
-  // It updates the Player AND re-fetches the quest list
-  const updatePlayerAndQuests = useCallback((newPlayerData) => {
-    setPlayer(newPlayerData); // Update player state immediately
-    // Re-fetch quests to show new checkmarks
+  // Update wrapper
+  const updatePlayer = (newData) => {
+    setPlayer(newData);
+    // Refresh quests if needed (e.g. after completing one)
     axios.get('https://hunter-log.onrender.com/api/quests')
-      .then(res => setAllQuests(res.data))
-      .catch(err => console.error("Error fetching quests:", err));
-  }, []);
+      .then(res => setQuests(res.data));
+  };
 
+  // --- RENDER TABS ---
+  const renderContent = () => {
+    if (!player) return <div style={{textAlign:'center', marginTop: '50px'}}>SYSTEM LOADING...</div>;
 
-  const renderWindow = () => {
-    switch (activeWindow) {
-      case 'STATS':
-        return <StatsPage key="stats" player={player} />;
-      case 'QUESTS':
-        return <QuestsPage 
-                  key="quests" 
-                  player={player} 
-                  setPlayer={updatePlayerAndQuests} // <-- Pass the new function
-                  allQuests={allQuests} // <-- Pass the master quest list
-                />;
-      case 'SKILLS':
-        return <SkillsPage key="skills" player={player} setPlayer={setPlayer} />;
-      case 'MAP':
-        return <MapPage key="map" />;
-      case 'INVENTORY':
-        return <InventoryPage key="inventory" />;
-      case 'BOSSES':
-        return <BossesPage key="bosses" />;
-      case 'LOGBOOK':
-        return <LogbookPage key="logbook" />;
-      default:
-        return <StatsPage key="stats" player={player} />;
+    // Calculate Evolved Class Name
+    const className = getEvolvedClassName(player.active_skill_track, player.level);
+
+    switch (activeTab) {
+      case 'STATUS':
+        return (
+          <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
+            {/* Custom Header for Status */}
+            <div style={{marginBottom: '20px', borderBottom: `1px solid ${theme.primary}`, paddingBottom: '10px'}}>
+               <h1 style={{margin:0, fontSize: '24px', color: theme.primary}}>SYSTEM STATUS</h1>
+               <div style={{display:'flex', justifyContent:'space-between', color: '#888', fontSize:'12px'}}>
+                  <span>ID: {player.username.toUpperCase()}</span>
+                  <span style={{color: theme.success}}>{className}</span>
+               </div>
+            </div>
+            {/* Reusing your Stats Page but injecting the updated player */}
+            <StatsPage player={{...player, classNameOverride: className}} />
+          </motion.div>
+        );
+
+      case 'MISSIONS':
+        return (
+          <motion.div initial={{x: 20, opacity:0}} animate={{x: 0, opacity:1}} exit={{x: -20, opacity:0}}>
+            <h2 style={{color: theme.danger, borderBottom: `1px solid ${theme.danger}`}}>ACTIVE OPERATIONS</h2>
+            <DailyQuests player={player} setPlayer={updatePlayer} quests={quests} />
+            
+            <div style={{marginTop: '30px'}}>
+               <h3 style={{color: theme.danger, fontSize: '16px'}}>THREAT DETECTED</h3>
+               <BossesPage /> 
+            </div>
+          </motion.div>
+        );
+
+      case 'EVOLUTION':
+        return (
+          <motion.div initial={{x: -20, opacity:0}} animate={{x: 0, opacity:1}} exit={{x: 20, opacity:0}}>
+            <h2 style={{color: theme.primary, borderBottom: `1px solid ${theme.primary}`}}>EVOLUTION TREE</h2>
+            <MapPage />
+            <div style={{marginTop: '30px'}}>
+               <h3 style={{color: theme.success, fontSize: '16px'}}>SKILL DATABASE</h3>
+               <SkillsPage player={player} setPlayer={setPlayer} />
+            </div>
+          </motion.div>
+        );
+      
+      default: return null;
     }
   };
-  
+
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#000' }}>
-      <Sidebar 
-        activeWindow={activeWindow} 
-        setActiveWindow={setActiveWindow} 
-        isMenuOpen={isMenuOpen}
-        setIsMenuOpen={setIsMenuOpen}
-      />
-      <div style={styles.pageContainer}>
-        <motion.button
-            style={menuButtonStyles}
-            onClick={() => setIsMenuOpen(true)}
-            whileHover={{ scale: 1.1 }}
-        >
-            ☰ Menu
-        </motion.button>
+    <div style={styles.appContainer}>
+      <div style={styles.contentArea}>
         <AnimatePresence mode="wait">
-          <motion.div
-            key={activeWindow}
-            initial="initial"
-            animate="in"
-            exit="out"
-            variants={windowVariants}
-            transition={pageTransition}
-          >
-            {renderWindow()}
-          </motion.div>
+          {renderContent()}
         </AnimatePresence>
+      </div>
+
+      {/* 3-TAB NAVIGATION DECK */}
+      <div style={styles.navBar}>
+        <button 
+          style={{...styles.navButton, ...(activeTab === 'STATUS' ? styles.activeNav : {})}}
+          onClick={() => setActiveTab('STATUS')}
+        >
+          <span>◈</span> STATUS
+        </button>
+        
+        <button 
+          style={{...styles.navButton, ...(activeTab === 'MISSIONS' ? styles.activeNav : {})}}
+          onClick={() => setActiveTab('MISSIONS')}
+        >
+          <span>⚔</span> MISSIONS
+        </button>
+        
+        <button 
+          style={{...styles.navButton, ...(activeTab === 'EVOLUTION' ? styles.activeNav : {})}}
+          onClick={() => setActiveTab('EVOLUTION')}
+        >
+          <span>⟁</span> EVOLUTION
+        </button>
       </div>
     </div>
   );
 }
-
-const menuButtonStyles = {
-    position: 'fixed',
-    top: '10px',
-    left: '10px',
-    zIndex: 2000,
-    backgroundColor: 'rgba(0, 187, 255, 0.1)',
-    color: '#00bfff',
-    border: '1px solid #00bfff',
-    padding: '10px 15px',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    fontSize: '14px',
-};
 
 export default App;
