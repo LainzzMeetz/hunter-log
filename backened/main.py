@@ -28,18 +28,16 @@ async def seed_database_logic():
     await Player.delete_all(); await Quest.delete_all(); await Skill.delete_all()
     await Achievement.delete_all(); await MapChapter.delete_all(); await Boss.delete_all()
     
-    # Player with new field for study limit
+    # Player Initialization (Now correctly includes daily_study_points)
     player = Player(
         username="Player",
         level=1, 
         exp=0, 
         exp_to_next_level=300, 
         stats=Stats(),
-        active_skill_track="software_dev_skill"
+        active_skill_track="software_dev_skill",
+        daily_study_points=0 
     )
-    # We initialize the custom field manually if not in model default
-    if not hasattr(player, "daily_study_points"):
-        player.daily_study_points = 0
     await player.insert()
 
     # 1. WAKE UP (+Clarity)
@@ -70,12 +68,11 @@ async def seed_database_logic():
     await Quest(title="Health", description="Recovery.", type="daily", exp_grant=10, stat_reward="vitality", stat_points=1, sub_tasks=[ SubTask(title="Sleep 7+ Hours"), SubTask(title="Clean Meal")]).insert()
 
     # 6. STUDY (Infinite Type)
-    # We set exp_grant to 0 here because it's calculated dynamically based on input
     await Quest(
         title="Study", 
         description="Log your skill acquisition sessions.", 
         type="daily",
-        exp_grant=0,  
+        exp_grant=0, # Dynamic
         stat_reward="study", 
         stat_points=0
     ).insert()
@@ -91,16 +88,16 @@ async def seed_database_logic():
 
 @app.on_event("startup")
 async def on_startup():
+    print("Connecting to MongoDB...")
     client = AsyncIOMotorClient(settings.DATABASE_URL)
     await init_beanie(database=client.hunters_log_db, document_models=[Player, Quest, Skill, Achievement, HealthMetric, InventoryItem, MapChapter, Boss, JournalEntry])
+    print("Connected.")
 
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 async def get_player_instance():
     player = await Player.find_one(Player.username == "Player")
     if not player: raise HTTPException(status_code=404, detail="Player not found.")
-    # Ensure field exists
-    if not hasattr(player, "daily_study_points"): player.daily_study_points = 0
     return player
 
 # --- LOGIC ---
@@ -127,8 +124,12 @@ async def get_player(): return await get_player_instance()
 @app.put("/api/player/set-track", response_model=Player)
 async def set_active_track(data: dict = Body(...)):
     player = await get_player_instance()
-    if not hasattr(player.stats, data.get("track")): raise HTTPException(status_code=400, detail="Invalid track.")
-    player.active_skill_track = data.get("track")
+    # Ensure stat exists, if not create it dynamically
+    track = data.get("track")
+    if not hasattr(player.stats, track): 
+        setattr(player.stats, track, 1) # Initialize if missing
+    
+    player.active_skill_track = track
     await player.save()
     return player
 
@@ -179,22 +180,19 @@ async def complete_quest(quest_id: PydanticObjectId, data: dict = Body(default={
         if points_to_log < 1 or points_to_log > 5:
              raise HTTPException(400, "Points must be between 1 and 5.")
         
-        # Limit Check
         if player.daily_study_points + points_to_log > 10:
              raise HTTPException(400, "Daily cognitive limit reached (Max 10 pts/day).")
              
-        # Add to Specific Track
         track = player.active_skill_track
+        # Ensure stat exists
         current_val = getattr(player.stats, track, 1)
         setattr(player.stats, track, current_val + points_to_log)
         
-        # Update Daily Limit
         player.daily_study_points += points_to_log
         
-        # Grant EXP (e.g., 15 EXP per point logged)
+        # Grant EXP (15 EXP per point)
         player = calculate_level_up(player, points_to_log * 15)
         
-        # DO NOT mark quest as completed. Return immediately.
         await player.save()
         return player
 
@@ -213,9 +211,7 @@ async def start_new_day():
     player = await get_player_instance()
     
     missed = 0
-    # Reset Quests
     for q in daily_quests:
-        # Study is never "missed" in this new mode, so we skip it for penalty check
         if q.title != "Study" and not q.completed:
             missed += 1
         q.completed = False
@@ -223,17 +219,15 @@ async def start_new_day():
             for t in q.sub_tasks: t.completed = False
         await q.save()
         
-    # Reset Daily Study Limit
     player.daily_study_points = 0
     
-    # Penalty (Safe Mode)
     if missed > 0 and player.level >= 10:
         player = calculate_level_up(player, -(missed * 5))
         
     await player.save()
     return {"message": "Day Reset."}
 
-# --- OTHER ROUTES (Standard) ---
+# --- OTHER ROUTES ---
 @app.get("/api/system/reset")
 async def system_reset(): return await seed_database_logic()
 @app.get("/api/skills", response_model=List[Skill])
