@@ -3,139 +3,135 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import SystemWindow from '../components/SystemWindow';
-import { styles } from '../components/styles';
 
-const clickSound = new Audio('/audio/click.mp3');
-
-const bossStyles = {
-    container: {
-        width: '95vw',
-        maxWidth: '700px',
-    },
-    bossItem: {
-        ...styles.item,
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '20px',
-        backgroundColor: '#2a2a2a',
-    },
-    bossName: {
-        fontSize: '20px',
-        fontWeight: 'bold',
-        color: '#ff4444',
-    },
-    defeatedText: {
-        fontSize: '18px',
-        color: '#00ff7f',
-        fontWeight: 'bold',
-    }
+const styles = {
+  listContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '15px',
+    maxHeight: '60vh',
+    overflowY: 'auto',
+    paddingRight: '5px'
+  },
+  bossCard: {
+    backgroundColor: 'rgba(20, 0, 0, 0.6)', // Red tint for danger
+    border: '1px solid #ff4444',
+    padding: '15px',
+    borderRadius: '5px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px'
+  },
+  defeatedCard: {
+    backgroundColor: 'rgba(50, 50, 50, 0.4)',
+    border: '1px solid #555',
+    opacity: 0.7
+  },
+  bossName: {
+    color: '#ff4444',
+    fontSize: '18px',
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: '2px',
+    textShadow: '0 0 10px rgba(255, 68, 68, 0.6)'
+  },
+  desc: {
+    color: '#ccc',
+    fontSize: '14px',
+    fontFamily: 'Share Tech Mono, monospace'
+  },
+  button: {
+    padding: '10px',
+    backgroundColor: '#ff4444',
+    color: '#000',
+    border: 'none',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    fontFamily: 'Share Tech Mono, monospace',
+    marginTop: '5px',
+    textTransform: 'uppercase'
+  }
 };
 
-function BossesPage() {
-    const [bosses, setBosses] = useState([]);
-    const [newName, setNewName] = useState('');
-    const [newDesc, setNewDesc] = useState('');
-    
-    const fetchBosses = () => {
-        axios.get('https://hunter-log.onrender.com/api/bosses')
-            .then(res => setBosses(res.data))
-            .catch(err => console.error("Error fetching bosses:", err));
-    };
+const BossesPage = () => {
+  const [bosses, setBosses] = useState([]);
 
-    useEffect(fetchBosses, []);
-    
-    // --- NEW: Add Boss Logic ---
-    const handleAddBoss = async (e) => {
-        e.preventDefault();
-        if (!newName.trim()) return;
-        clickSound.play();
+  useEffect(() => {
+    fetchBosses();
+  }, []);
 
-        try {
-            await axios.post('https://hunter-log.onrender.com/api/bosses', {
-                name: newName,
-                description: newDesc || 'A new challenge has appeared.'
-            });
-            setNewName('');
-            setNewDesc('');
-            fetchBosses();
-        } catch (error) {
-            console.error("Error adding boss:", error);
-        }
-    };
-    
-    const handleDefeat = async (bossId) => {
-        clickSound.play();
-        if (!window.confirm("CONFIRM DEFEAT: Are you sure you have defeated this Boss?")) return;
+  const fetchBosses = () => {
+    axios.get('https://hunter-log.onrender.com/api/bosses')
+      .then(res => setBosses(res.data))
+      .catch(err => console.error(err));
+  };
 
-        try {
-            await axios.put(`https://hunter-log.onrender.com/api/bosses/${bossId}/defeat`);
-            fetchBosses();
-        } catch (error) {
-            console.error("Error defeating boss:", error);
-        }
-    };
+  const handleDefeat = async (bossId, bossName) => {
+    if (!window.confirm(`CONFIRM ELIMINATION: ${bossName}?`)) return;
 
-    return (
-        <SystemWindow>
-            <h2 style={styles.title}>[ Boss Battles ]</h2>
-            <div style={bossStyles.container}>
-                
-                {/* --- ADD BOSS FORM --- */}
-                <form onSubmit={handleAddBoss} style={{marginBottom: '30px', borderBottom: '1px solid #333', paddingBottom: '15px'}}>
-                    <h3 style={styles.subtitle}>Define New Boss</h3>
-                    <div style={{display: 'flex', gap: '10px', marginBottom: '10px'}}>
-                        <input 
-                            type="text"
-                            style={{...styles.input, flexGrow: 1}}
-                            placeholder="Boss Name (e.g., 'Overthinking Boss')"
-                            value={newName}
-                            onChange={(e) => setNewName(e.target.value)}
-                        />
-                        <motion.button type="submit" style={{...styles.button, width: '150px'}} whileHover={{scale: 1.05}}>
-                            ADD BOSS
-                        </motion.button>
-                    </div>
-                    <textarea 
-                        style={{...styles.input, width: 'calc(100% - 22px)', height: '30px'}}
-                        placeholder="Description (e.g., 'Weak to Clarity and Focus stats.')"
-                        value={newDesc}
-                        onChange={(e) => setNewDesc(e.target.value)}
-                    />
-                </form>
+    try {
+      // 1. Call API
+      const res = await axios.put(`https://hunter-log.onrender.com/api/bosses/${bossId}/defeat`);
+      
+      // 2. IMMEDIATE UI UPDATE (Fixes the "Nothing changed" bug)
+      setBosses(prevBosses => 
+        prevBosses.map(boss => 
+          boss._id === bossId ? { ...boss, defeated: true } : boss
+        )
+      );
+      
+      // Optional: Play sound
+      try { new Audio('/audio/quest_complete.mp3').play(); } catch(e){}
+      
+    } catch (error) {
+      console.error("Combat Error:", error);
+      alert("System Error: Could not register defeat.");
+    }
+  };
 
-                {/* --- BOSS LIST --- */}
-                {bosses.map(boss => (
-                    <motion.div 
-                        key={boss._id} 
-                        style={{
-                            ...bossStyles.bossItem,
-                            opacity: boss.defeated ? 0.5 : 1
-                        }}
-                        layout
-                    >
-                        <div style={{width: '60%'}}>
-                            <span style={bossStyles.bossName}>{boss.name.toUpperCase()}</span>
-                            <p style={{fontSize: '14px', color: '#aaa', margin: '5px 0'}}>{boss.description}</p>
-                        </div>
-                        
-                        {boss.defeated ? (
-                            <span style={bossStyles.defeatedText}>DEFEATED</span>
-                        ) : (
-                            <motion.button
-                                style={styles.button}
-                                onClick={() => handleDefeat(boss._id)}
-                                whileHover={{ scale: 1.05, backgroundColor: '#ff4444', color: '#000', borderColor: '#ff4444' }}
-                                whileTap={{ scale: 0.95 }}
-                            >
-                                DEFEAT
-                            </motion.button>
-                        )}
-                    </motion.div>
-                ))}
+  return (
+    <SystemWindow title="[ DUNGEON BOSSES ]">
+      <div style={styles.listContainer}>
+        {bosses.length === 0 && <div style={{color:'#666', textAlign:'center'}}>NO HOSTILES DETECTED.</div>}
+        
+        {bosses.map(boss => (
+          <motion.div 
+            key={boss._id}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            style={{
+              ...styles.bossCard,
+              ...(boss.defeated ? styles.defeatedCard : {})
+            }}
+          >
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+              <span style={{
+                  ...styles.bossName,
+                  color: boss.defeated ? '#888' : '#ff4444',
+                  textDecoration: boss.defeated ? 'line-through' : 'none'
+              }}>
+                {boss.name}
+              </span>
+              {boss.defeated && <span style={{color: '#00ff7f', fontSize: '12px'}}>[ELIMINATED]</span>}
             </div>
-        </SystemWindow>
-    );
-}
-
+            
+            <p style={styles.desc}>{boss.description}</p>
+            
+            {!boss.defeated && (
+              <motion.button
+                style={styles.button}
+                whileHover={{ scale: 1.05, backgroundColor: '#ff0000' }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => handleDefeat(boss._id, boss.name)}
+              >
+                CONFIRM DEFEAT
+              </motion.button>
+            )}
+          </motion.div>
+        ))}
+      </div>
+    </SystemWindow>
+  );
+};
 
 export default BossesPage;
