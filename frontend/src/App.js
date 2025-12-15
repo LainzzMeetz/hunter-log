@@ -12,39 +12,15 @@ import InventoryPage from './pages/InventoryPage';
 import BossesPage from './pages/BossesPage';
 import LogbookPage from './pages/LogbookPage';
 
-// --- STYLES DEFINED AT THE TOP ---
-
 const styles = {
   pageContainer: {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'flex-start',
-    // 50px top padding ensures content isn't hidden behind the menu
-    padding: '50px 5px 20px 5px', 
+    padding: '10px 5px', // <-- ORIGINAL PADDING (No "Safe Zone")
     minHeight: '100vh',
     width: '100%',
-    boxSizing: 'border-box',
   }
-};
-
-const menuButtonStyles = {
-    position: 'fixed',
-    top: '15px',
-    left: '15px',
-    zIndex: 2000,
-    
-    // Transparent & Borderless
-    backgroundColor: 'transparent', 
-    border: 'none',
-    
-    // Icon Styling
-    color: '#00bfff',
-    fontSize: '32px', 
-    cursor: 'pointer',
-    padding: '0',
-    
-    // Subtle Glow
-    textShadow: '0 0 10px rgba(0, 191, 255, 0.5)',
 };
 
 const windowVariants = {
@@ -55,15 +31,15 @@ const windowVariants = {
 
 const pageTransition = { type: "tween", ease: "anticipate", duration: 0.4 };
 
-// --- MAIN COMPONENT ---
-
 function App() {
   const [activeWindow, setActiveWindow] = useState('STATS');
   const [player, setPlayer] = useState(null);
-  const [allQuests, setAllQuests] = useState([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  
+  // --- Master Quest List State ---
+  const [allQuests, setAllQuests] = useState([]);
 
-  // Optimized data fetching
+  // This function is the *only* way to refresh all data
   const fetchAllData = useCallback(() => {
     axios.get('https://hunter-log.onrender.com/api/player')
       .then(res => setPlayer(res.data))
@@ -74,17 +50,21 @@ function App() {
       .catch(err => console.error("Error fetching quests:", err));
   }, []);
 
+  // Fetch all data *once* when the app loads
   useEffect(() => {
     fetchAllData();
   }, [fetchAllData]);
 
-  // Stable update function
+  // This function will be passed down to all components
+  // It updates the Player AND re-fetches the quest list
   const updatePlayerAndQuests = useCallback((newPlayerData) => {
-    setPlayer(newPlayerData);
+    setPlayer(newPlayerData); // Update player state immediately
+    // Re-fetch quests to show new checkmarks
     axios.get('https://hunter-log.onrender.com/api/quests')
       .then(res => setAllQuests(res.data))
       .catch(err => console.error("Error fetching quests:", err));
   }, []);
+
 
   const renderWindow = () => {
     switch (activeWindow) {
@@ -94,8 +74,8 @@ function App() {
         return <QuestsPage 
                   key="quests" 
                   player={player} 
-                  setPlayer={updatePlayerAndQuests} 
-                  allQuests={allQuests} 
+                  setPlayer={updatePlayerAndQuests} // <-- Pass the new function
+                  allQuests={allQuests} // <-- Pass the master quest list
                 />;
       case 'SKILLS':
         return <SkillsPage key="skills" player={player} setPlayer={setPlayer} />;
@@ -121,16 +101,13 @@ function App() {
         setIsMenuOpen={setIsMenuOpen}
       />
       <div style={styles.pageContainer}>
-        {/* THE MENU ICON BUTTON */}
         <motion.button
             style={menuButtonStyles}
             onClick={() => setIsMenuOpen(true)}
-            whileHover={{ scale: 1.2 }}
-            whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.1 }}
         >
-            ☰
+            ☰ Menu
         </motion.button>
-
         <AnimatePresence mode="wait">
           <motion.div
             key={activeWindow}
@@ -139,7 +116,6 @@ function App() {
             exit="out"
             variants={windowVariants}
             transition={pageTransition}
-            style={{ width: '100%', maxWidth: '500px' }}
           >
             {renderWindow()}
           </motion.div>
@@ -148,5 +124,19 @@ function App() {
     </div>
   );
 }
+
+const menuButtonStyles = {
+    position: 'fixed',
+    top: '10px',
+    left: '10px',
+    zIndex: 2000,
+    backgroundColor: 'rgba(0, 187, 255, 0.1)',
+    color: '#00bfff',
+    border: '1px solid #00bfff',
+    padding: '10px 15px',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    fontSize: '14px',
+};
 
 export default App;
