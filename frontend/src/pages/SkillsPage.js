@@ -16,11 +16,12 @@ const styles = {
   button: { backgroundColor: theme.primary, color: '#000', border: 'none', padding: '8px', fontWeight: 'bold', fontFamily: theme.font, cursor: 'pointer', width:'100%' }
 };
 
+// TRACKS LIST - Replaced Cyber with Quantum
 const tracks = [
   { id: 'software_dev_skill', label: 'SOFTWARE DEV' },
   { id: 'ai_ml_skill', label: 'AI / ML' },
   { id: 'embedded_skill', label: 'EMBEDDED SYSTEMS' },
-  { id: 'cybersecurity', label: 'CYBERSECURITY' },
+  { id: 'quantum_computing', label: 'QUANTUM COMPUTING' },
 ];
 
 const SkillsPage = ({ player, setPlayer }) => {
@@ -64,7 +65,7 @@ const SkillsPage = ({ player, setPlayer }) => {
         ))}
       </div>
 
-      {/* 2. SKILLS LIST + ADD BUTTON */}
+      {/* 2. SKILLS LIST */}
       <div>
         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', ...styles.sectionTitle}}>
            <span>SKILL LOG</span>
