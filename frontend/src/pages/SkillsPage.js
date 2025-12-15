@@ -2,182 +2,136 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
-import SystemWindow from '../components/SystemWindow';
-import { styles } from '../components/styles';
 
-const clickSound = new Audio('/audio/click.mp3');
+const theme = {
+  primary: '#00bfff',
+  font: '"Share Tech Mono", monospace',
+  cardBg: 'rgba(10, 20, 30, 0.6)',
+  selectedBorder: '1px solid #00bfff',
+  defaultBorder: '1px solid #333'
+};
 
-const treeStyles = {
-  // CRITICAL FIX: Layout is now a simple vertical column
-  layout: {
+const styles = {
+  container: {
     display: 'flex',
-    flexDirection: 'column', // Stacked vertically
+    flexDirection: 'column',
     gap: '20px',
-    width: '95vw', // Full width
-    maxWidth: '500px', // Max desktop width
+    paddingBottom: '20px'
   },
-  treeColumn: {
-    padding: '10px',
-    border: `1px solid ${styles.title.color}33`,
-    borderRadius: '8px',
+  trackSection: {
+    marginBottom: '20px'
   },
-  treeTitle: {
-    ...styles.subtitle,
-    textAlign: 'center',
-    marginTop: '5px',
-  },
-  skillItem: {
-    ...styles.item,
-    padding: '10px 15px',
-    fontSize: '16px',
-    backgroundColor: '#2a2a2a'
-  },
-  activeButton: {
-    ...styles.button,
-    width: '100%',
-    backgroundColor: styles.title.color,
-    color: '#000',
-    textShadow: 'none',
-  },
-  input: {
-    ...styles.input,
-    width: 'calc(100% - 22px)',
+  sectionTitle: {
+    color: '#888',
+    fontSize: '12px',
     marginBottom: '10px',
+    letterSpacing: '1px',
+    borderBottom: '1px solid #333',
+    paddingBottom: '5px'
+  },
+  trackButton: {
+    width: '100%',
+    padding: '15px',
+    marginBottom: '10px',
+    backgroundColor: theme.cardBg,
+    color: '#ccc',
+    border: theme.defaultBorder,
+    textAlign: 'left',
+    cursor: 'pointer',
+    fontFamily: theme.font,
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  activeTrack: {
+    borderColor: theme.primary,
+    backgroundColor: 'rgba(0, 191, 255, 0.1)',
+    color: '#fff',
+    boxShadow: '0 0 10px rgba(0, 191, 255, 0.2)'
+  },
+  skillCard: {
+    padding: '10px',
+    borderLeft: '2px solid #555',
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    marginBottom: '5px',
+    fontSize: '14px'
   }
 };
 
-const skillTrees = [
-    { name: "Embedded", key: 'embedded_skill', db_key: 'embedded' },
-    { name: "AI / ML", key: 'ai_ml_skill', db_key: 'ai_ml' },
-    { name: "Software Dev", key: 'software_dev_skill', db_key: 'software_dev' },
-    { name: "Quantum", key: 'quantum_computing', db_key: 'quantum' },
+const tracks = [
+  { id: 'software_dev_skill', label: 'SOFTWARE DEV', class: 'SHADOW DEV' },
+  { id: 'ai_ml_skill', label: 'AI / ML', class: 'AI ARCHITECT' },
+  { id: 'embedded_skill', label: 'EMBEDDED SYS', class: 'IRON ENGINEER' },
+  { id: 'cybersecurity', label: 'CYBERSEC', class: 'GATEKEEPER' },
 ];
 
-function SkillsPage({ player: playerProp, setPlayer }) {
-  const [allSkills, setAllSkills] = useState([]);
-  const [localPlayer, setLocalPlayer] = useState(playerProp);
-  const [newSkillName, setNewSkillName] = useState('');
-  const [newSkillTree, setNewSkillTree] = useState('embedded');
-  const [newSkillDesc, setNewSkillDesc] = useState('');
-
-  const fetchSkills = () => {
-    axios.get('https://hunter-log.onrender.com/api/skills')
-      .then(res => setAllSkills(res.data))
-      .catch(err => console.error("Error fetching skills:", err));
-  };
+const SkillsPage = ({ player, setPlayer }) => {
+  const [skills, setSkills] = useState([]);
 
   useEffect(() => {
-    if (!localPlayer || playerProp !== localPlayer) {
-      axios.get('https://hunter-log.onrender.com/api/player')
-        .then(res => setLocalPlayer(res.data))
-        .catch(err => console.error("Error fetching player data:", err));
-    } else if (playerProp && localPlayer !== playerProp) {
-        setLocalPlayer(playerProp);
-    }
-    fetchSkills();
-  }, [playerProp]);
+    axios.get('https://hunter-log.onrender.com/api/skills')
+      .then(res => setSkills(res.data))
+      .catch(err => console.error(err));
+  }, []);
 
-  const handleAddSkill = async (e) => {
-    e.preventDefault();
-    if (!newSkillName.trim()) return;
-    clickSound.play();
-    
+  const handleTrackChange = async (trackId) => {
     try {
-      await axios.post('https://hunter-log.onrender.com/api/skills', {
-        name: newSkillName,
-        tree: newSkillTree, 
-        description: newSkillDesc,
-      });
-      setNewSkillName('');
-      setNewSkillDesc('');
-      fetchSkills(); 
-    } catch (error) {
-      console.error("Error adding skill:", error);
-    }
-  };
-
-  const handleSetTrack = async (trackName) => {
-    clickSound.play();
-    try {
+      // 1. Update Backend
       const res = await axios.put('https://hunter-log.onrender.com/api/player/set-track', {
-        track: trackName
+        track: trackId
       });
-      setLocalPlayer(res.data); 
+      // 2. Update Global Player State (Changes Class Title instantly)
       setPlayer(res.data);
     } catch (error) {
-      console.error("Error setting active track:", error);
+      console.error("Error setting track:", error);
     }
   };
 
-  if (!localPlayer) return <div>Loading player data...</div>;
-
-  const filterSkills = (db_key) => allSkills.filter(s => s.tree === db_key);
-
   return (
-    <SystemWindow>
-      <div style={treeStyles.layout}> {/* Use the new vertical layout */}
-        <h2 style={styles.title}>[ Skill Tree Control ]</h2>
-        
-        {/* --- SKILL ADDITION FORM --- */}
-        <div style={treeStyles.inputGroup}>
-          <h3 style={styles.subtitle}>Log New Skill</h3>
-          <form onSubmit={handleAddSkill} style={{ display: 'flex', gap: '15px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-            <div style={{ flex: '1 1 200px' }}>
-              <label style={styles.statLabel}>Skill Name</label>
-              <input 
-                style={treeStyles.input}
-                type="text"
-                value={newSkillName}
-                onChange={(e) => setNewSkillName(e.target.value)}
-                placeholder="e.g., 'TensorFlow Lite for MCUs'"
-              />
+    <div style={styles.container}>
+      
+      {/* 1. CLASS SELECTION */}
+      <div style={styles.trackSection}>
+        <div style={styles.sectionTitle}>SELECT ACTIVE CLASS (FOCUS)</div>
+        {tracks.map(track => (
+          <motion.button
+            key={track.id}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => handleTrackChange(track.id)}
+            style={{
+              ...styles.trackButton,
+              ...(player?.active_skill_track === track.id ? styles.activeTrack : {})
+            }}
+          >
+            <div>
+              <div style={{fontWeight:'bold', fontSize:'16px'}}>{track.label}</div>
+              <div style={{fontSize:'12px', color:'#888'}}>CLASS: {track.class}</div>
             </div>
-            <div style={{ flex: '1 1 150px' }}>
-              <label style={styles.statLabel}>Skill Tree</label>
-              <select style={treeStyles.input} value={newSkillTree} onChange={(e) => setNewSkillTree(e.target.value)}>
-                <option value="embedded">Embedded</option>
-                <option value="ai_ml">AI / ML</option>
-                <option value="software_dev">Software Dev</option>
-                <option value="quantum">Quantum</option>
-              </select>
-            </div>
-            <motion.button 
-              type="submit"
-              style={{ ...styles.button, width: '150px', padding: '10px' }}
-              whileHover={{ scale: 1.05 }}
-            >
-              Log Skill
-            </motion.button>
-          </form>
-        </div>
-
-        <p style={styles.statLabel}>
-          Active Track: **{localPlayer.active_skill_track.toUpperCase()}** (Completing "Study" quest grants +1 to this stat.)
-        </p>
-        
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
-          {/* Render the 4 trees */}
-          {skillTrees.map(tree => (
-              <div key={tree.key} style={treeStyles.treeColumn}>
-                <h3 style={treeStyles.treeTitle}>{tree.name}</h3>
-                {filterSkills(tree.db_key).map(skill => (
-                  <div key={skill._id} style={treeStyles.skillItem}>{skill.name}</div>
-                ))}
-                <motion.button
-                  style={localPlayer.active_skill_track === tree.key ? treeStyles.activeButton : styles.button}
-                  onClick={() => handleSetTrack(tree.key)}
-                  whileHover={{ scale: 1.05 }}
-                >
-                  {localPlayer.active_skill_track === tree.key ? "ACTIVE" : "Set Active"}
-                </motion.button>
-              </div>
-          ))}
-          
-        </div>
+            {player?.active_skill_track === track.id && <div style={{color: theme.primary}}>● ACTIVE</div>}
+          </motion.button>
+        ))}
       </div>
-    </SystemWindow>
+
+      {/* 2. SKILL LOG */}
+      <div>
+        <div style={styles.sectionTitle}>ACQUIRED SKILL DATABASE</div>
+        {skills.length === 0 && <div style={{color: '#555', fontSize: '12px'}}>NO SKILLS LOGGED. START STUDYING.</div>}
+        
+        {skills.map(skill => (
+          <motion.div 
+            key={skill._id} 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }}
+            style={styles.skillCard}
+          >
+            <div style={{color: '#fff', fontWeight: 'bold'}}>{skill.name}</div>
+            <div style={{color: '#888', fontSize: '12px'}}>{skill.tree.toUpperCase()} TREE</div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
   );
-}
+};
 
 export default SkillsPage;
