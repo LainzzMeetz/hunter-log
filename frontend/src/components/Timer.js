@@ -1,136 +1,93 @@
 // frontend/src/components/Timer.js
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { styles } from './styles';
 
-// Safe Audio Player (Prevents crashes)
-const safePlay = (path) => {
-  try {
-    const audio = new Audio(path);
-    audio.volume = 0.5;
-    audio.play().catch(() => console.warn("Audio blocked (harmless)."));
-  } catch (err) {
-    console.warn("Audio error (harmless).");
-  }
-};
-
-const formatTime = (seconds) => {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-};
-
-function Timer({ quest, onComplete }) {
-  // 1. Internal State (Isolated from Parent)
-  const durationSec = quest.duration_minutes * 60;
-  const [timeLeft, setTimeLeft] = useState(durationSec);
+const Timer = ({ quest, onComplete }) => {
+  const [timeLeft, setTimeLeft] = useState(quest.duration_minutes * 60);
   const [isActive, setIsActive] = useState(false);
-  
-  // 2. Refs for Mutable Variables (No Re-renders)
   const endTimeRef = useRef(null);
-  const timerIdRef = useRef(null);
 
-  // 3. The Delta Engine
-  const startTimer = () => {
-    safePlay('/audio/timer_start.mp3');
-    setIsActive(true);
-    
-    // Calculate the absolute point in time when this finishes
-    // This makes it immune to lag or background throttling
-    const now = Date.now();
-    endTimeRef.current = now + (timeLeft * 1000);
-    
-    tick();
-  };
+  useEffect(() => {
+    let interval = null;
 
-  const tick = () => {
-    if (!endTimeRef.current) return;
+    if (isActive) {
+      // If we just started, set the target end time
+      if (!endTimeRef.current) {
+        endTimeRef.current = Date.now() + timeLeft * 1000;
+      }
 
-    const now = Date.now();
-    const remaining = Math.ceil((endTimeRef.current - now) / 1000);
+      interval = setInterval(() => {
+        const now = Date.now();
+        const distance = endTimeRef.current - now;
 
-    if (remaining <= 0) {
-      // Complete
-      setTimeLeft(0);
-      setIsActive(false);
-      safePlay('/audio/quest_complete.mp3');
-      timerIdRef.current = null;
+        if (distance <= 0) {
+          // TIMER FINISHED
+          clearInterval(interval);
+          setTimeLeft(0);
+          setIsActive(false);
+          onComplete(quest._id); // Trigger API
+        } else {
+          // Update display
+          setTimeLeft(Math.ceil(distance / 1000));
+        }
+      }, 1000);
     } else {
-      // Continue
-      setTimeLeft(remaining);
-      // Recursively schedule next tick
-      timerIdRef.current = setTimeout(tick, 1000);
+      // Paused or stopped
+      clearInterval(interval);
+      endTimeRef.current = null; // Reset target if stopped manually
     }
+
+    return () => clearInterval(interval);
+  }, [isActive, timeLeft, onComplete, quest._id]);
+
+  const toggleTimer = () => {
+    setIsActive(!isActive);
   };
 
-  const stopTimer = () => {
-    if (timerIdRef.current) clearTimeout(timerIdRef.current);
-    safePlay('/audio/click.mp3');
-    setIsActive(false);
-    endTimeRef.current = null;
-    // Reset to full duration
-    setTimeLeft(durationSec);
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
-
-  // Cleanup on Unmount
-  useEffect(() => {
-    return () => {
-      if (timerIdRef.current) clearTimeout(timerIdRef.current);
-    };
-  }, []);
-
-  // Reset if Quest Duration changes externally
-  useEffect(() => {
-    if (!isActive) {
-      setTimeLeft(quest.duration_minutes * 60);
-    }
-  }, [quest.duration_minutes, isActive]);
-
-  // Render Logic
-  if (timeLeft === 0 && !isActive) {
-    return (
-      <motion.button 
-        style={{...styles.button, backgroundColor: '#00bfff', color: '#000', fontWeight: 'bold'}}
-        onClick={() => onComplete(quest._id)}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
-      >
-        CLAIM REWARD
-      </motion.button>
-    );
-  }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-      <div style={{ 
-          ...styles.font, 
-          fontSize: '28px', 
-          color: isActive ? '#00ff7f' : '#fff', 
-          minWidth: '90px'
+    <div style={{
+      display: 'flex', 
+      alignItems: 'center', 
+      gap: '15px', 
+      backgroundColor: '#111', 
+      padding: '5px 10px', 
+      borderRadius: '4px',
+      border: '1px solid #333',
+      width: 'fit-content'
+    }}>
+      <div style={{
+        fontFamily: '"Share Tech Mono", monospace', 
+        fontSize: '18px', 
+        color: isActive ? '#00bfff' : '#888',
+        fontWeight: 'bold',
+        minWidth: '60px',
+        textAlign: 'center'
       }}>
         {formatTime(timeLeft)}
       </div>
-      
-      {!isActive ? (
-        <motion.button
-          style={styles.button}
-          onClick={startTimer}
-          whileHover={{ scale: 1.1, backgroundColor: '#00bfff', color: '#000' }}
-        >
-          START
-        </motion.button>
-      ) : (
-        <motion.button
-          style={{ ...styles.button, borderColor: '#ff4444', color: '#ff4444' }}
-          onClick={stopTimer}
-          whileHover={{ scale: 1.1, backgroundColor: '#ff4444', color: '#000' }}
-        >
-          STOP
-        </motion.button>
-      )}
+
+      <button 
+        onClick={toggleTimer}
+        style={{
+          backgroundColor: isActive ? '#ff4444' : '#00bfff',
+          color: '#000',
+          border: 'none',
+          padding: '5px 10px',
+          fontFamily: '"Share Tech Mono", monospace',
+          fontWeight: 'bold',
+          cursor: 'pointer',
+          fontSize: '12px'
+        }}
+      >
+        {isActive ? 'PAUSE' : 'START FOCUS'}
+      </button>
     </div>
   );
-}
+};
 
-// Optimization: Only re-render if quest ID or duration changes
-export default React.memo(Timer);
+export default Timer;
