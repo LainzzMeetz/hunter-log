@@ -1,4 +1,4 @@
-// frontend/src/components/SinTransmutation.jsx
+// frontend/src/components/SinTransmutation.jsx 
 import React, { useState, useEffect } from 'react';
 import { DEADLY_SINS } from '../config/sinsConfig'; 
 
