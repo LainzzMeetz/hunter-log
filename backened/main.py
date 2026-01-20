@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from beanie import init_beanie, PydanticObjectId
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic_settings import BaseSettings
+from pydantic import BaseModel  # <--- ADDED THIS IMPORT
 from typing import List, Optional
 from datetime import datetime
 
@@ -117,9 +118,34 @@ def calculate_level_up(player, exp_change):
             player.exp = 0
     return player
 
+# --- NEW DATA MODEL FOR EMERGENCY SYSTEM ---
+class EmergencyRequest(BaseModel):
+    username: str
+    energy_type: str
+    xp_reward: int
+
 # --- ENDPOINTS ---
 @app.get("/api/player", response_model=Player)
 async def get_player(): return await get_player_instance()
+
+# --- NEW ENDPOINT FOR SIN TRANSMUTATION ---
+@app.post("/api/emergency/complete")
+async def complete_emergency(request: EmergencyRequest):
+    # 1. Find the player (Try the sent username, fallback to "Player")
+    player = await Player.find_one(Player.username == request.username)
+    if not player:
+        player = await Player.find_one(Player.username == "Player")
+    
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+
+    # 2. Use the existing logic to calculate level ups safely
+    player = calculate_level_up(player, request.xp_reward)
+    
+    # 3. Save to Database
+    await player.save()
+
+    return {"status": "SUCCESS", "new_xp": player.exp, "new_level": player.level}
 
 @app.put("/api/player/set-track", response_model=Player)
 async def set_active_track(data: dict = Body(...)):
