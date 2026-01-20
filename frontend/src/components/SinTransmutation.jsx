@@ -1,15 +1,41 @@
+// frontend/src/components/SinTransmutation.jsx
 import React, { useState, useEffect } from 'react';
-import { DEADLY_SINS } from '../config/sinsConfig'; // Import config
-import './SinTransmutation.css';
+import { DEADLY_SINS } from '../config/sinsConfig'; 
+
+// Inline styles to match your App.js theme
+const styles = {
+  overlay: {
+    position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    display: 'flex', justifyContent: 'center', alignItems: 'center',
+    zIndex: 2000, fontFamily: '"Share Tech Mono", monospace',
+  },
+  box: {
+    width: '90%', maxWidth: '400px',
+    border: '2px solid', // Color comes from config
+    padding: '20px', backgroundColor: '#050505',
+    boxShadow: '0 0 20px rgba(0,0,0,0.5)', textAlign: 'center',
+    color: '#e0e0e0',
+  },
+  timer: {
+    fontSize: '40px', margin: '20px 0', fontWeight: 'bold',
+  },
+  taskItem: {
+    border: '1px solid #333', padding: '10px', marginBottom: '10px',
+    cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center'
+  },
+  button: {
+    background: 'none', border: '1px solid', padding: '10px 20px',
+    color: 'inherit', fontFamily: 'inherit', fontWeight: 'bold', cursor: 'pointer',
+    marginTop: '20px', width: '100%', textTransform: 'uppercase'
+  }
+};
 
 const SinTransmutation = ({ selectedSin, onClose, onComplete }) => {
-  // Load the specific data for the selected sin (e.g., LUST or WRATH)
   const config = DEADLY_SINS[selectedSin]; 
-  
   const [timeLeft, setTimeLeft] = useState(config.duration);
   const [completedTasks, setCompletedTasks] = useState({});
 
-  // Timer Logic (Same as before)
   useEffect(() => {
     if (timeLeft <= 0) return;
     const timer = setInterval(() => setTimeLeft(t => t - 1), 1000);
@@ -17,72 +43,46 @@ const SinTransmutation = ({ selectedSin, onClose, onComplete }) => {
   }, [timeLeft]);
 
   const toggleTask = (taskId) => {
-    setCompletedTasks(prev => ({
-      ...prev,
-      [taskId]: !prev[taskId]
-    }));
+    setCompletedTasks(prev => ({ ...prev, [taskId]: !prev[taskId] }));
   };
 
   const handleFinish = () => {
-    // Check if all tasks are done
     const allDone = config.tasks.every(t => completedTasks[t.id]);
     if (allDone) {
-      // Calculate Total XP
       const totalXp = config.tasks.reduce((acc, t) => acc + t.xp, 0);
       onComplete(selectedSin, totalXp);
     }
   };
 
-  const formatTime = (seconds) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s < 10 ? '0' : ''}${s}`;
-  };
-
-  // Dynamic Styles based on the Sin's Color
-  const styleColor = { 
-    color: config.color, 
-    borderColor: config.color,
-    boxShadow: `0 0 15px ${config.color}40` // 40 is opacity
-  };
+  const formatTime = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 
   return (
-    <div className="transmutation-overlay">
-      <div className="system-window" style={styleColor}>
-        <div className="header">
-          <h1 className="blink">⚠️ {config.label} ⚠️</h1>
-          <p>{config.questDescription}</p>
-        </div>
+    <div style={styles.overlay}>
+      <div style={{ ...styles.box, borderColor: config.color, color: config.color }}>
+        <h1 style={{fontSize: '24px', margin: 0}}>⚠️ {config.label} ⚠️</h1>
+        <p style={{color: '#fff', fontSize: '14px'}}>{config.questDescription}</p>
 
-        <div className="timer-box">
-          <h2>PROTOCOL: {config.questTitle}</h2>
-          <div className="timer-digits">{formatTime(timeLeft)}</div>
-        </div>
+        <div style={styles.timer}>{formatTime(timeLeft)}</div>
 
-        <div className="checklist">
+        <div style={{color: '#fff'}}>
           {config.tasks.map(task => (
             <div 
               key={task.id} 
-              className={`task-item ${completedTasks[task.id] ? 'active' : ''}`}
+              style={{ ...styles.taskItem, backgroundColor: completedTasks[task.id] ? '#111' : 'transparent', borderColor: completedTasks[task.id] ? config.color : '#333' }}
               onClick={() => toggleTask(task.id)}
-              style={{ borderColor: completedTasks[task.id] ? config.color : '#333' }}
             >
-              <span className="checkbox">[{completedTasks[task.id] ? 'X' : ' '}]</span>
+              <span style={{marginRight: '10px'}}>[{completedTasks[task.id] ? 'X' : ' '}]</span>
               <span>{task.text} (+{task.xp} XP)</span>
             </div>
           ))}
         </div>
 
-        <div className="footer-actions">
-          <button className="btn-cancel" onClick={onClose}>FAILURE (CLOSE)</button>
-          <button 
-            className="btn-confirm" 
-            style={{ backgroundColor: config.color, color: '#000' }}
-            onClick={handleFinish}
-          >
-            CONFIRM TRANSMUTATION
-          </button>
-        </div>
+        <button style={{...styles.button, borderColor: config.color, color: config.color}} onClick={handleFinish}>
+          CONFIRM TRANSMUTATION
+        </button>
+        <button style={{...styles.button, borderColor: '#555', color: '#555', marginTop: '10px'}} onClick={onClose}>
+          CANCEL
+        </button>
       </div>
     </div>
   );
