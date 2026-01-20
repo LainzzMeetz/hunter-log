@@ -9,10 +9,10 @@ import DailyQuests from './components/DailyQuests';
 import BossesPage from './pages/BossesPage';
 import MapPage from './pages/MapPage';
 import SkillsPage from './pages/SkillsPage';
-import SinTransmutation from './components/SinTransmutation'; // NEW IMPORT
+import SinTransmutation from './components/SinTransmutation';
 
 // --- CONFIG ---
-import { DEADLY_SINS } from './config/sinsConfig'; // NEW IMPORT
+import { DEADLY_SINS } from './config/sinsConfig';
 
 // --- THEME ---
 const theme = {
@@ -33,7 +33,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
-    position: 'relative', // Added for absolute positioning of overlays
+    position: 'relative',
   },
   contentArea: {
     flex: 1,
@@ -130,7 +130,7 @@ function App() {
     setActiveTab(tab);
   };
 
-  // --- NEW HANDLER FOR SIN COMPLETION ---
+  // --- NEW HANDLER FOR SIN COMPLETION (FIXED & ACTIVE) ---
   const handleTransmutationComplete = (sin, xpGained) => {
     playSound('complete');
     
@@ -139,14 +139,18 @@ function App() {
       setPlayer(prev => ({ ...prev, xp: prev.xp + xpGained }));
     }
 
-    // 2. Send to Backend (Example: You can uncomment this when your API is ready)
-    /*
+    // 2. Send to Backend (NOW ACTIVE)
     axios.post('https://hunter-log.onrender.com/api/emergency/complete', {
-        user_id: player._id,
+        username: player.username,
         energy_type: sin,
         xp_reward: xpGained
+    })
+    .then(res => {
+        console.log("System Saved XP:", res.data);
+    })
+    .catch(err => {
+        console.error("Save Failed:", err);
     });
-    */
 
     // 3. Reset UI
     setActiveSin(null);
