@@ -3,7 +3,7 @@
 const SYSTEM_BLUE = '#00bfff'; // The core "glow" color
 const SYSTEM_BLUE_DIM = '#00bfff55'; // A dimmer, 33% opacity blue
 const SYSTEM_BLUE_BG = 'rgba(0, 187, 255, 0.1)'; // 10% opacity blue for backgrounds
-const SYSTEM_BLUE_BG_HOVER = 'rgba(0, 187, 255, 0.2)'; // 20% opacity on hover
+//const SYSTEM_BLUE_BG_HOVER = 'rgba(0, 187, 255, 0.2)'; // 20% opacity on hover
 
 export const styles = {
   // Use the new "System" font everywhere
@@ -112,4 +112,5 @@ export const styles = {
     color: '#e0e0e0',
     fontSize: '16px',
   },
+
 };
