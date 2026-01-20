@@ -9,6 +9,10 @@ import DailyQuests from './components/DailyQuests';
 import BossesPage from './pages/BossesPage';
 import MapPage from './pages/MapPage';
 import SkillsPage from './pages/SkillsPage';
+import SinTransmutation from './components/SinTransmutation'; // NEW IMPORT
+
+// --- CONFIG ---
+import { DEADLY_SINS } from './config/sinsConfig'; // NEW IMPORT
 
 // --- THEME ---
 const theme = {
@@ -29,6 +33,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
+    position: 'relative', // Added for absolute positioning of overlays
   },
   contentArea: {
     flex: 1,
@@ -98,6 +103,10 @@ function App() {
   const [player, setPlayer] = useState(null);
   const [quests, setQuests] = useState([]);
 
+  // --- NEW STATE FOR SIN SYSTEM ---
+  const [activeSin, setActiveSin] = useState(null);
+  const [showSinMenu, setShowSinMenu] = useState(false);
+
   const fetchAllData = useCallback(() => {
     axios.get('https://hunter-log.onrender.com/api/player')
       .then(res => setPlayer(res.data))
@@ -121,6 +130,29 @@ function App() {
     setActiveTab(tab);
   };
 
+  // --- NEW HANDLER FOR SIN COMPLETION ---
+  const handleTransmutationComplete = (sin, xpGained) => {
+    playSound('complete');
+    
+    // 1. Instant UI Update (Optimistic)
+    if (player) {
+      setPlayer(prev => ({ ...prev, xp: prev.xp + xpGained }));
+    }
+
+    // 2. Send to Backend (Example: You can uncomment this when your API is ready)
+    /*
+    axios.post('https://hunter-log.onrender.com/api/emergency/complete', {
+        user_id: player._id,
+        energy_type: sin,
+        xp_reward: xpGained
+    });
+    */
+
+    // 3. Reset UI
+    setActiveSin(null);
+    setShowSinMenu(false);
+  };
+
   const renderContent = () => {
     if (!player) return <div style={{textAlign:'center', marginTop: '50px'}}>SYSTEM LOADING...</div>;
 
@@ -133,8 +165,8 @@ function App() {
             <div style={{marginBottom: '20px', borderBottom: `1px solid ${theme.primary}`, paddingBottom: '10px'}}>
                <h1 style={{margin:0, fontSize: '24px', color: theme.primary}}>DASHBOARD</h1>
                <div style={{display:'flex', justifyContent:'space-between', color: '#888', fontSize:'12px'}}>
-                  <span>ID: {player.username.toUpperCase()}</span>
-                  <span style={{color: theme.success, fontWeight: 'bold'}}>{rank}</span>
+                 <span>ID: {player.username.toUpperCase()}</span>
+                 <span style={{color: theme.success, fontWeight: 'bold'}}>{rank}</span>
                </div>
             </div>
             <StatsPage player={player} />
@@ -178,6 +210,58 @@ function App() {
         </AnimatePresence>
       </div>
 
+      {/* --- FLOATING SIN CONTROLLER (Bottom Right) --- */}
+      <div style={{ position: 'fixed', bottom: '90px', right: '20px', zIndex: 1100, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+        
+        {/* The Menu (Hidden by default) */}
+        {showSinMenu && (
+          <motion.div 
+            initial={{opacity:0, y: 10}} 
+            animate={{opacity:1, y: 0}} 
+            exit={{opacity:0, y: 10}}
+            style={{background: 'rgba(0,0,0,0.95)', border: '1px solid #333', padding: '10px', borderRadius: '5px', minWidth: '150px'}}
+          >
+            {Object.keys(DEADLY_SINS).map(key => (
+              <button
+                key={key}
+                onClick={() => { playSound('click'); setActiveSin(key); }}
+                style={{
+                  display: 'block', width: '100%', padding: '10px 15px', margin: '5px 0',
+                  background: 'none', border: `1px solid ${DEADLY_SINS[key].color}`,
+                  color: DEADLY_SINS[key].color, fontFamily: theme.font, cursor: 'pointer',
+                  textAlign: 'right', fontWeight: 'bold', fontSize: '12px'
+                }}
+              >
+                {key} ◈
+              </button>
+            ))}
+          </motion.div>
+        )}
+
+        {/* The Warning Button (!) */}
+        <button 
+          onClick={() => { playSound('click'); setShowSinMenu(!showSinMenu); }}
+          style={{
+            width: '60px', height: '60px', borderRadius: '50%',
+            backgroundColor: theme.danger, color: '#000', border: 'none',
+            fontSize: '30px', fontWeight: 'bold', boxShadow: `0 0 15px ${theme.danger}`,
+            cursor: 'pointer', fontFamily: theme.font
+          }}
+        >
+          !
+        </button>
+      </div>
+
+      {/* --- SIN OVERLAY COMPONENT --- */}
+      {activeSin && (
+        <SinTransmutation 
+          selectedSin={activeSin} 
+          onClose={() => setActiveSin(null)} 
+          onComplete={handleTransmutationComplete} 
+        />
+      )}
+
+      {/* --- BOTTOM NAVIGATION --- */}
       <div style={styles.navBar}>
         <button style={{...styles.navButton, ...(activeTab === 'STATUS' ? styles.activeNav : {})}} onClick={() => handleTabChange('STATUS')}>
           <span>◈</span> STATUS
